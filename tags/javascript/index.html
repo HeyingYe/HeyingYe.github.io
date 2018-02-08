@@ -21,6 +21,17 @@
             <link rel="stylesheet" href="/css/nav-indicator.css">
             
   
+  <!-- 百度统计 -->
+  <script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "//hm.baidu.com/hm.js?e0579a52b8a95746289aeb877c0f84b8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+  </script>
+  
 
   
             </meta>
@@ -86,10 +97,18 @@
                    
                 </ul>
             </div>
-            <form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
-                <input type="search" name="q" id="search" autocomplete="off" autocorrect="off" autocapitalize="off" maxlength="20" placeholder="Search" />
-                <input type="hidden" name="q" value="site:heyingye.github.io">
-            </form>
+            <div id="site_search">
+              <input type="text" id="local-search-input" name="q" results="0" placeholder="search my blog..." class="form-control"/>
+              <div id="local-search-result"></div>
+            </div>
+            <script type="text/javascript">      
+                 var search_path = "search.xml";
+                 if (search_path.length == 0) {
+                    search_path = "search.xml";
+                 }
+                 var path = "/" + search_path;
+                 searchFunc(path, 'local-search-input', 'local-search-result');
+            </script>
         </nav>
     </div>
 </div>
@@ -121,6 +140,29 @@
     <aside>
         
     
+
+
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/javascript/">javascript</a></li></ul>
+    </div>
+  </div>
+
+
+
+    
+  <section class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li></ul>
+    </div>
+  </section>
+
+
+
+    
   <div class="widget-wrap">
     <h3 class="widget-title">Recent Posts</h3>
     <div class="widget">
@@ -146,7 +188,7 @@
 	    <ul >
 	        
 	        <li>
-	            <a href="https://github.com/HeyingYe" title="小码农">
+	            <a href="https://github.com/HeyingYe" title="My Github">
 	                GitHub
 	            </a>
 	        </li>
@@ -173,7 +215,6 @@
             </div>
         </div>
         <footer class="footer">
-    <p>由<a href="http://hexo.io/" target="_blank">Hexo</a>强力驱动，搭载<a href="https://github.com/wayou/hexo-theme-gstyle">gstyle</a>主题</p>
     <p>
         &copy; 2018 HeyingYe
     </p>

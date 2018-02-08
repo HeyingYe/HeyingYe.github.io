@@ -21,6 +21,17 @@
             <link rel="stylesheet" href="/css/nav-indicator.css">
             
   
+  <!-- 百度统计 -->
+  <script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "//hm.baidu.com/hm.js?e0579a52b8a95746289aeb877c0f84b8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+  </script>
+  
 
   
             </meta>
@@ -86,10 +97,18 @@
                    
                 </ul>
             </div>
-            <form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
-                <input type="search" name="q" id="search" autocomplete="off" autocorrect="off" autocapitalize="off" maxlength="20" placeholder="Search" />
-                <input type="hidden" name="q" value="site:heyingye.github.io">
-            </form>
+            <div id="site_search">
+              <input type="text" id="local-search-input" name="q" results="0" placeholder="search my blog..." class="form-control"/>
+              <div id="local-search-result"></div>
+            </div>
+            <script type="text/javascript">      
+                 var search_path = "search.xml";
+                 if (search_path.length == 0) {
+                    search_path = "search.xml";
+                 }
+                 var path = "/" + search_path;
+                 searchFunc(path, 'local-search-input', 'local-search-result');
+            </script>
         </nav>
     </div>
 </div>
@@ -115,7 +134,8 @@
           </section>
 
           <section class="post-content">
-            
+            <p>JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制<br>JS引擎的运行机制<br>JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制<br>JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制<br>JS引擎的运行机制</p>
+
           </section>
         </article>
         
@@ -134,29 +154,10 @@
 
          <!-- comments -->
         <div class="comment-section">
-  
-    
-
-    <!-- 多说评论框 start -->
-      <div class="ds-thread" data-thread-key="_posts/JS引擎的运行机制.md" data-title="JS引擎的运行机制" data-url="https://heyingye.github.io/2018/02/06/JS引擎的运行机制/"></div>
-    <!-- 多说评论框 end -->
-    <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
-      <script type="text/javascript">
-      var duoshuoQuery = {short_name:"wayouliu"};
-      (function() {
-        var ds = document.createElement('script');
-        ds.type = 'text/javascript';ds.async = true;
-        ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
-        ds.charset = 'UTF-8';
-        (document.getElementsByTagName('head')[0] 
-         || document.getElementsByTagName('body')[0]).appendChild(ds);
-      })();
-      </script>
-    <!-- 多说公共JS代码 end -->
-
-  
-
-
+  <!-- UY BEGIN -->
+  <div id="uyan_frame"></div>
+  <script type="text/javascript" src="http://v2.uyan.cc/code/uyan.js?uid=2157331"></script>
+  <!-- UY END -->
 </div>
 
     </div>
@@ -167,7 +168,6 @@
             </div>
         </div>
         <footer class="footer">
-    <p>由<a href="http://hexo.io/" target="_blank">Hexo</a>强力驱动，搭载<a href="https://github.com/wayou/hexo-theme-gstyle">gstyle</a>主题</p>
     <p>
         &copy; 2018 HeyingYe
     </p>
