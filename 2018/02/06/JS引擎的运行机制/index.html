@@ -3,7 +3,7 @@
         <meta charset="utf-8">
             
             <title>
-                JS引擎的运行机制 | HeyingYe&#39;s Personal Website
+                JS引擎的运行机制 | Heying Ye&#39;s Personal Website
             </title>
             <meta content="width=device-width, initial-scale=1" name="viewport">
             <meta name="theme-color" content="#4184f3">
@@ -51,7 +51,7 @@
         <nav>
             <div class="logo wave">
                 <a href="/" id="logo">
-                    HeyingYe&#39;s Personal Website
+                    Heying Ye&#39;s Personal Website
                 </a>
             </div>
             <div class="nav-toggle-icon" >
@@ -72,25 +72,25 @@
                      
                         <li>
                             <a class="wave " href="/">
-                                Home
+                                首页
                             </a>
                         </li>
                      
                         <li>
                             <a class="wave " href="/archives">
-                                Archive
+                                归档
                             </a>
                         </li>
                      
                         <li>
                             <a class="wave " href="/about">
-                                About
+                                关于
                             </a>
                         </li>
                      
                         <li>
                             <a class="wave no-smoothstate" href="/atom.xml">
-                                RSS
+                                订阅
                             </a>
                         </li>
                      
@@ -98,21 +98,10 @@
                    
                 </ul>
             </div>
-            <div id="site_search">
-              <input type="text" id="local-search-input" name="q" results="0" placeholder="search my blog..." class="form-control"/>
-              <div id="local-search-result"></div>
-            </div>
-            <script type="text/javascript">      
-                 var search_path = "search.xml";
-                 if (search_path.length == 0) {
-                    search_path = "search.xml";
-                 }
-                 var path = "/" + search_path;
-                 searchFunc(path, 'local-search-input', 'local-search-result');
-            </script>
         </nav>
     </div>
 </div>
+
             <div class="container content">
                 <div class="scene_element scene_element--fadein">
                     <div class="row">
@@ -146,7 +135,7 @@
           
           
             <a class="post-next pager-item" href="/2018/02/05/hello-world/">
-              <strong class="article-nav-caption">Older</strong>
+              <strong class="article-nav-caption">下一篇</strong>
               <p class="post-nav-title">Hello World</p>
             </a>
           
@@ -154,12 +143,36 @@
         
 
          <!-- comments -->
-        <div class="comment-section">
-  <!-- UY BEGIN -->
-  <div id="uyan_frame"></div>
-  <script type="text/javascript" src="http://v2.uyan.cc/code/uyan.js?uid=2157331"></script>
-  <!-- UY END -->
-</div>
+        
+<div id="container"></div>
+  <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+  <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+  <script>
+    const myTheme = {
+      render(state, instance) {
+        const container = document.createElement('div')
+        container.lang = "en-US"
+        container.className = 'gitment-container gitment-root-container'
+        container.appendChild(instance.renderHeader(state, instance))
+        container.appendChild(instance.renderEditor(state, instance))
+        container.appendChild(instance.renderComments(state, instance))
+        container.appendChild(instance.renderFooter(state, instance))
+        return container
+      },
+    }
+  var gitment = new Gitment({
+    //theme: myTheme,
+    //id: 'https://heyingye.github.io/', // 可选。默认为 location.href
+    owner: 'HeyingYe',
+    repo: 'https://github.com/HeyingYe/gitment',
+    oauth: {
+      client_id: '20ebb920d7e488a7ac82',
+      client_secret: 'cdaeb822a4d44dd83043f3d4a6aa38c19ffe5cc2',
+    },
+  })
+  gitment.render('container')
+</script>
+
 
     </div>
     
@@ -170,7 +183,10 @@
         </div>
         <footer class="footer">
     <p>
-        &copy; 2018 HeyingYe
+        &copy; 2018 Heying Ye
+    </p>
+    <p>
+    	Heying Ye&#39;s Personal Website
     </p>
 </footer>
 <script src="/lib/jquery.js"></script>

@@ -14,6 +14,7 @@ var searchFunc = function(path, search_id, content_id) {
             }).get();
             var $input = document.getElementById(search_id);
             var $resultContent = document.getElementById(content_id);
+            
             $input.addEventListener('input', function(){
                 var str='<ul class=\"search-result-list\">';                
                 var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
@@ -72,14 +73,19 @@ var searchFunc = function(path, search_id, content_id) {
                                 match_content = match_content.replace(regS, "<em class=\"search-keyword\">"+keyword+"</em>");
                             });
                             
-                            str += "<p class=\"search-result\">" + match_content +"...</p>"
+                            //str += "<p class=\"search-result\">" + match_content +"...</p>"
                         }
                         str += "</li>";
                     }
                 });
                 str += "</ul>";
                 $resultContent.innerHTML = str;
+                //$resultContent.style.display = "block";
             });
+
+            /*$input.addEventListener("blur",function(){
+            	$resultContent.style.display = "none";
+            })*/
         }
     });
 }

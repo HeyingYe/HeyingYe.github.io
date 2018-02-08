@@ -36,7 +36,7 @@ h1,h2,h3,h4,h5,h6{
 
 h1 {
     padding-bottom: .3em;
-    font-size: 2.25em;
+    font-size: 2em;
     line-height: 1.2;
 }
 
@@ -48,7 +48,7 @@ h2 {
 }
 
 h3 {
-    font-size: 1.5em;
+    font-size: 1.2em;
     line-height: 1.43
 }
 
@@ -109,19 +109,7 @@ nav {
     justify-content: space-between;
     align-items: stretch;
 }
-ul.search-result-list {
-  padding-left: 10px;
-}
-a.search-result-title {
-  font-weight: bold;
-}
-p.search-result {
-  color=#555;
-}
-em.search-keyword {
-  border-bottom: 1px dashed #4088b8;
-  font-weight: bold;
-}
+
 nav a {
     color: #fff;
 }
@@ -555,6 +543,7 @@ figure.highlight figcaption{
 }
 .footer p{
     margin: 0;
+    line-height: 30px;
 }
 
 /*keyboard support*/
@@ -572,4 +561,36 @@ kbd {
   border-bottom-color: #bbb;
   border-radius: 3px;
   box-shadow: inset 0 -1px 0 #bbb;
+}
+/* 站内搜索 */
+#site_search{
+    /*min-height: 50px;*/
+}
+#local-search-input{
+    height: 30px;
+    width: 200px;
+    text-indent: 10px;
+}
+#local-search-result{
+    /* display: none; */
+    background: #fff;
+    z-index: 1000;
+    /* border:1px solid #4184f3; */
+}
+ul.search-result-list {
+  padding-left: 10px;
+  margin-top: 10px;
+}
+.search-result-list li{
+    list-style: none;
+}
+a.search-result-title {
+  font-weight: bold;
+}
+p.search-result {
+  color=#555;
+}
+em.search-keyword {
+  border-bottom: 1px dashed #4088b8;
+  font-weight: bold;
 }
