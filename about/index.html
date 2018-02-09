@@ -114,34 +114,22 @@
             
         </article>
         
-<div id="container"></div>
-  <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
-  <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
   <script>
-    const myTheme = {
-      render(state, instance) {
-        const container = document.createElement('div')
-        container.lang = "en-US"
-        container.className = 'gitment-container gitment-root-container'
-        container.appendChild(instance.renderHeader(state, instance))
-        container.appendChild(instance.renderEditor(state, instance))
-        container.appendChild(instance.renderComments(state, instance))
-        container.appendChild(instance.renderFooter(state, instance))
-        return container
-      },
-    }
-  var gitment = new Gitment({
-    //theme: myTheme,
-    //id: 'https://heyingye.github.io/', // 可选。默认为 location.href
-    owner: 'HeyingYe',
-    repo: 'https://github.com/HeyingYe/gitment',
-    oauth: {
-      client_id: '20ebb920d7e488a7ac82',
-      client_secret: 'cdaeb822a4d44dd83043f3d4a6aa38c19ffe5cc2',
-    },
-  })
-  gitment.render('container')
-</script>
+    const gitalk = new Gitalk({
+      clientID: '20ebb920d7e488a7ac82',
+      clientSecret: 'cdaeb822a4d44dd83043f3d4a6aa38c19ffe5cc2',
+      repo: 'https://github.com/HeyingYe/HeyingYe.github.io',
+      owner: 'HeyingYe',
+      admin: ['https://github.com/HeyingYe'],
+      // facebook-like distraction free mode
+      distractionFreeMode: false
+    })
+
+    gitalk.render('gitalk-container')
+  </script>
 
     </div>
 </div>
