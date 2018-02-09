@@ -353,6 +353,7 @@ figure.highlight .gutter{
 }
 .post-date{
     color: rgba(0,0,0,0.54);
+    font-size: 15px;
 }
 .read-more{
     float: right;
