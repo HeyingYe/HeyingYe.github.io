@@ -581,9 +581,12 @@ kbd {
 ul.search-result-list {
   padding-left: 10px;
   margin-top: 10px;
+  width: 200px;
+  border:1px solid #ccc;
 }
 .search-result-list li{
     list-style: none;
+    line-height: 30px;
 }
 a.search-result-title {
   font-weight: bold;
