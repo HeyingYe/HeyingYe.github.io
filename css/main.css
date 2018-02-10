@@ -356,7 +356,9 @@ figure.highlight .gutter{
     font-size: 15px;
 }
 .read-more{
-    float: right;
+    float: left;
+    line-height: 30px;
+    padding:0px;
 }
 /*tags*/
 ul.post-tag-list{
