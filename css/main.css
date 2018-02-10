@@ -456,7 +456,8 @@ figure.highlight figcaption{
     display: none;
 }
 
-@media (min-width: 425px) {
+
+@media (min-width: 370px) {
     .container {
         padding-right: 15px;
         padding-left: 15px;
@@ -469,8 +470,10 @@ figure.highlight figcaption{
 
     figure.highlight,pre, .highlight, .gist {
         margin:15px 0;
+        max-width: 100%;
         max-height: 500px;
     }
+
     figure.highlight::-webkit-scrollbar,
     pre::-webkit-scrollbar,
     .highlight::-webkit-scrollbar,
@@ -481,7 +484,6 @@ figure.highlight figcaption{
     article blockquote{
         margin: 0;
     }
-
 }
 
 @media (min-width: 768px) {
