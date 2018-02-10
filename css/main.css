@@ -456,7 +456,7 @@ figure.highlight figcaption{
     display: none;
 }
 
-@media (min-width: 370px) {
+@media (min-width: 320px) {
     figure.highlight,pre, .highlight, .gist {
         margin:15px 0;
         max-width: 100%;
