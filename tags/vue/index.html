@@ -3,7 +3,7 @@
         <meta charset="utf-8">
             
             <title>
-                js | Heying Ye&#39;s Personal Website
+                标签: vue | Heying Ye&#39;s Personal Website
             </title>
             <meta content="width=device-width, initial-scale=1" name="viewport">
             <meta name="theme-color" content="#4184f3">
@@ -89,7 +89,7 @@
                         </li>
                      
                         <li>
-                            <a class="wave no-smoothstate" href="/atom.xml">
+                            <a class="wave no-smoothstate" href="https://github.com/HeyingYe">
                                 订阅
                             </a>
                         </li>
@@ -106,72 +106,118 @@
                 <div class="scene_element scene_element--fadein">
                     <div class="row">
     <div class="main">
-        <article>
-          
-          <header class="post-header">
-          
-          </header>
-          <h1 class="post-title">js</h1>
-
-          <section class="post-info">
-            <span class="post-date">2018/02/06</span>
+        <article class="title-list">
+            
+                <h3>
+                    vue
+                </h3>
             
             
-            <span class="post-tags">
-              <ul class="post-tag-list"><li class="post-tag-list-item"><a class="post-tag-list-link" href="/tags/javascript/">javascript</a></li></ul>
-            </span>
+            <section>
+                <a href="/2018/02/10/vue-cli项目结构分析/">
+                    vue-cli项目结构分析
+                </a>
+                <time class="post-date" datetime="2018-02-10T06:15:15.000Z">
+                    2018-02-10
+                </time>
+            </section>
             
-          </section>
-
-          <section class="post-content">
-            <p>JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制Read MoreJS引擎的运行机制JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制JS引擎的运行机制</p>
-
-          </section>
         </article>
         
-
-       
-        <div class="pager">
-          
-          
-            <a class="post-next pager-item" href="/2018/02/05/hello-world/">
-              <strong class="article-nav-caption">下一篇</strong>
-              <p class="post-nav-title">Hello World</p>
-            </a>
-          
-        </div>
-        
-
-         <!-- comments -->
-        
-              <div id="gitalk-container"></div>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
-  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
-  <script>
-    const gitalk = new Gitalk({
-      clientID: 'ad4f0565d8335986ed07',
-      clientSecret: 'b8650d8cfe437436552d0e071a01162d5ca8ce7b',
-      repo: 'HeyingYe.github.io',
-      owner: 'HeyingYe',
-      admin: ['HeyingYe'],
-      // id: "25859283",
-      // facebook-like distraction free mode
-      distractionFreeMode: false
-    })
-
-    gitalk.render('gitalk-container')
-  </script>
-
-        
-
+  
     </div>
     
     <aside>
-        <div id="toc">
-        </div>
+        
+    <script src="/js/search.js"></script>
+<script src="/lib/jquery.js"></script>
+
+<div id="site_search">
+	<label><h3>搜索</h3><input type="text" id="local-search-input" name="q" results="0" placeholder="search my blog..." class="form-control" autocomplete="off"/></label>
+
+  <div id="local-search-result"></div>
+</div>
+<script type="text/javascript">      
+     var search_path = "search.xml";
+     if (search_path.length == 0) {
+        search_path = "search.xml";
+     }
+     var path = "/" + search_path;
+        searchFunc(path, 'local-search-input', 'local-search-result');
+</script>
+
+
+    
+
+
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/javascript/">javascript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vue/">vue</a></li></ul>
+    </div>
+  </div>
+
+
+
+    
+  <section class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a></li></ul>
+    </div>
+  </section>
+
+
+
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/02/10/vue-cli项目结构分析/">vue-cli项目结构分析</a>
+          </li>
+        
+          <li>
+            <a href="/2018/02/06/js引擎/">js引擎</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+
+    
+  <section class="widget-wrap">
+    <h3 class="widget-title">链接</h3>
+    <div class="widget">
+	    <ul >
+	        
+	        <li>
+	            <a href="https://github.com/HeyingYe" title="My Github">
+	                GitHub
+	            </a>
+	        </li>
+	        
+	        <li>
+	            <a href="https://weibo.com/u/3962539040" title="HeyingYe WeiBo">
+	                微博
+	            </a>
+	        </li>
+	        
+	    </ul>
+    </div>
+  </section>
+
+
+
+
     </aside>
     
 </div>
+
 
                 </div>
             </div>

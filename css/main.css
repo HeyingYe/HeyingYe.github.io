@@ -42,7 +42,7 @@ h1 {
 
 h2 {
     padding-bottom: .3em;
-    font-size: 1.75em;
+    font-size: 1.45em;
     line-height: 1.225;
     border-bottom: 1px solid #eee
 }
@@ -261,7 +261,7 @@ article iframe{
 article img{
     max-width: 100%;
     display: block;
-    margin: 10px auto;
+    margin: 10px 0px;
     color: #999;
     cursor: pointer;
 }
@@ -355,6 +355,13 @@ figure.highlight .gutter{
     color: rgba(0,0,0,0.54);
     font-size: 15px;
 }
+
+.post-concent,.post-btn{
+    margin:0px;
+}
+.post-concent{
+    margin-bottom: 16px;
+}
 /*tags*/
 ul.post-tag-list{
     list-style: none;
@@ -394,6 +401,7 @@ article blockquote ol,article blockquote ul{
 }
 .tocify li a{
     color: rgba(0,0,0,0.54);
+    font-size: 1.2em;
 }
 .tocify li{
     border-left: 2px solid transparent;
@@ -461,6 +469,13 @@ figure.highlight figcaption{
 
     figure.highlight,pre, .highlight, .gist {
         margin:15px 0;
+        max-height: 500px;
+    }
+    figure.highlight::-webkit-scrollbar,
+    pre::-webkit-scrollbar,
+    .highlight::-webkit-scrollbar,
+    .gist::-webkit-scrollbar {
+        display: none;
     }
 
     article blockquote{

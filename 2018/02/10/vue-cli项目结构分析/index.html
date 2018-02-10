@@ -1,11 +1,130 @@
-<?xml version="1.0" encoding="utf-8"?>
-<search> 
+<!DOCTYPE html>
+          <head>
+        <meta charset="utf-8">
+            
+            <title>
+                vue-cli项目结构分析 | Heying Ye&#39;s Personal Website
+            </title>
+            <meta content="width=device-width, initial-scale=1" name="viewport">
+            <meta name="theme-color" content="#4184f3">
+            <meta name="baidu-site-verification" content="4htTFEpEPa" />
+            
+            
+            <link href="/favicon.ico" rel="icon"/>
+            
+
+            <link rel="stylesheet" href="/css/highlight.light.css">
+            <link rel="stylesheet" href="/css/prism-customize.css">
+            <link rel="stylesheet" href="/css/nav-icon.css">
+            <link rel="stylesheet" href="/css/waves.min.css">
+            <link rel="stylesheet" href="/css/jquery.tocify.css">
+            <link rel="stylesheet" href="/css/main.css">
+            <link rel="stylesheet" href="/css/nav-indicator.css">
+            
   
-    
-    <entry>
-      <title><![CDATA[vue-cli项目结构分析]]></title>
-      <url>/2018/02/10/vue-cli%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/</url>
-      <content type="html"><![CDATA[<h2 id="构建项目"><a href="/2018/02/10/vue-cli项目结构分析/#构建项目" class="headerlink" title="构建项目"></a>构建项目</h2><p>使用vue-cli脚手架搭建vue项目的具体步骤如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">npm install -g vue-cli</span><br><span class="line">cd E:(跳转到项目目录)</span><br><span class="line">vue init webpack vueproject (vueproject 为项目目录名称，可行更改)</span><br><span class="line">cd vueproject</span><br><span class="line">npm install</span><br><span class="line">npm run dev</span><br></pre></td></tr></table></figure></p>
+  <!-- 百度统计 -->
+  <script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "//hm.baidu.com/hm.js?e0579a52b8a95746289aeb877c0f84b8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+  </script>
+  
+
+  
+            </meta>
+        </meta>
+    </head>
+
+    <body>
+        <header>
+            <!-- cover image or sth. -->
+        </header>
+        <div id="main" class="m-scene">
+            
+<div class="nav-wrapper">
+
+    <div class="container">
+        <nav>
+            <div class="logo wave">
+                <a href="/" id="logo">
+                    Heying Ye&#39;s Personal Website
+                </a>
+            </div>
+            <div class="nav-toggle-icon" >
+                <div class="material-hamburger">
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                </div>
+            </div>
+            <div class="menu-wrapper">
+                <div class="nav-indicator">
+                </div>
+                <ul class="menus">
+                    
+                     
+                        <li>
+                            <a class="wave " href="/">
+                                首页
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/archives">
+                                归档
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/about">
+                                关于
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave no-smoothstate" href="https://github.com/HeyingYe">
+                                订阅
+                            </a>
+                        </li>
+                     
+                    
+                   
+                </ul>
+            </div>
+        </nav>
+    </div>
+</div>
+
+            <div class="container content">
+                <div class="scene_element scene_element--fadein">
+                    <div class="row">
+    <div class="main">
+        <article>
+          
+          <header class="post-header">
+          
+          </header>
+          <h1 class="post-title">vue-cli项目结构分析</h1>
+
+          <section class="post-info">
+            <span class="post-date">2018/02/10</span>
+            
+            
+            <span class="post-tags">
+              <ul class="post-tag-list"><li class="post-tag-list-item"><a class="post-tag-list-link" href="/tags/vue/">vue</a></li></ul>
+            </span>
+            
+          </section>
+
+          <section class="post-content">
+            <h2 id="构建项目"><a href="/2018/02/10/vue-cli项目结构分析/#构建项目" class="headerlink" title="构建项目"></a>构建项目</h2><p>使用vue-cli脚手架搭建vue项目的具体步骤如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">npm install -g vue-cli</span><br><span class="line">cd E:(跳转到项目目录)</span><br><span class="line">vue init webpack vueproject (vueproject 为项目目录名称，可行更改)</span><br><span class="line">cd vueproject</span><br><span class="line">npm install</span><br><span class="line">npm run dev</span><br></pre></td></tr></table></figure></p>
 <h2 id="项目结构分析"><a href="/2018/02/10/vue-cli项目结构分析/#项目结构分析" class="headerlink" title="项目结构分析"></a>项目结构分析</h2><p><img src="/2018/02/10/vue-cli项目结构分析/img/project.png" alt="项目结构"></p>
 <h3 id="package-json"><a href="/2018/02/10/vue-cli项目结构分析/#package-json" class="headerlink" title="package.json"></a>package.json</h3><p>抽取package.json文件重要部分分析</p>
 <blockquote>
@@ -52,32 +171,70 @@
 <p>该文件配置了开发和生产两种环境下的配置。</p>
 <hr>
 <h2 id="总结"><a href="/2018/02/10/vue-cli项目结构分析/#总结" class="headerlink" title="总结"></a>总结</h2><p>webpack的使用博大精深，仅仅了解到这里也只是入门。代码可以直接到我的github直接拉取，仓库地址<a href="https://github.com/HeyingYe/vue-structural-analysis" target="_blank" rel="noopener">https://github.com/HeyingYe/vue-structural-analysis</a>。</p>
-]]></content>
-      
+
+          </section>
+        </article>
         
-        <tags>
-            
-            <tag> vue </tag>
-            
-        </tags>
+
+       
+        <div class="pager">
+          
+          
+            <a class="post-next pager-item" href="/2018/02/06/js引擎/">
+              <strong class="article-nav-caption">下一篇</strong>
+              <p class="post-nav-title">js引擎</p>
+            </a>
+          
+        </div>
         
-    </entry>
+
+         <!-- comments -->
+        
+              <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+    const gitalk = new Gitalk({
+      clientID: 'ad4f0565d8335986ed07',
+      clientSecret: 'b8650d8cfe437436552d0e071a01162d5ca8ce7b',
+      repo: 'HeyingYe.github.io',
+      owner: 'HeyingYe',
+      admin: ['HeyingYe'],
+      // id: "25859283",
+      // facebook-like distraction free mode
+      distractionFreeMode: false
+    })
+
+    gitalk.render('gitalk-container')
+  </script>
+
+        
+
+    </div>
     
-    <entry>
-      <title><![CDATA[js引擎]]></title>
-      <url>/2018/02/06/js%E5%BC%95%E6%93%8E/</url>
-      <content type="html"><![CDATA[<p>敬请期待。</p>
-]]></content>
-      
-        
-        <tags>
-            
-            <tag> javascript </tag>
-            
-        </tags>
-        
-    </entry>
+    <aside>
+        <div id="toc">
+        </div>
+    </aside>
     
-  
-  
-</search>
+</div>
+
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+    <p>
+        &copy; 2018 Heying Ye
+    </p>
+    <p>
+    	Heying Ye&#39;s Personal Website
+    </p>
+</footer>
+<script src="/lib/jquery.js"></script>
+<script src="/lib/waves.js"></script>
+<script src="/lib/jquery-ui.js"></script>
+<script src="/lib/jquery.tocify.js"></script>
+<script src="/js/main.js"></script>
+
+    </body>
+</html>
