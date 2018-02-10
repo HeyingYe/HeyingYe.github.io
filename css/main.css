@@ -456,8 +456,15 @@ figure.highlight figcaption{
     display: none;
 }
 
-
 @media (min-width: 370px) {
+    figure.highlight,pre, .highlight, .gist {
+        margin:15px 0;
+        max-width: 100%;
+        max-height: 500px;
+    }
+}
+
+@media (min-width: 425px) {
     .container {
         padding-right: 15px;
         padding-left: 15px;
