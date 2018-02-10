@@ -355,11 +355,6 @@ figure.highlight .gutter{
     color: rgba(0,0,0,0.54);
     font-size: 15px;
 }
-.read-more{
-    float: left;
-    line-height: 30px;
-    padding:0px;
-}
 /*tags*/
 ul.post-tag-list{
     list-style: none;
