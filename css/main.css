@@ -286,6 +286,7 @@ article hr{
 }
 figure.highlight .gutter{
     padding: 0 5px;
+    display: none;
 }
 
 /*index cards*/
@@ -461,6 +462,15 @@ figure.highlight figcaption{
         margin:15px 0;
         max-width: 100%;
         max-height: 500px;
+    }
+    section.post-content .highlight pre,section.post-content pre {
+        padding: 16px;
+        overflow: auto;
+        font-size: 75%;
+        line-height: 1.45;
+        background-color: #f7f7f7;
+        border: 0;
+        border-radius: 3px
     }
 }
 
