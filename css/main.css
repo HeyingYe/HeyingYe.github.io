@@ -463,6 +463,9 @@ figure.highlight figcaption{
         max-width: 100%;
         max-height: 500px;
     }
+}
+
+@media (max-width: 375px){
     section.post-content .highlight pre,section.post-content pre {
         padding: 16px;
         overflow: auto;
