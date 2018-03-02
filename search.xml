@@ -3,6 +3,20 @@
   
     
     <entry>
+      <title><![CDATA[Internet通信（二）]]></title>
+      <url>/2018/03/02/Internet%E9%80%9A%E4%BF%A1%EF%BC%88%E4%BA%8C%EF%BC%89/</url>
+      <content type="html"></content>
+      
+        
+        <tags>
+            
+            <tag> Internet </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[Internet通信(一)]]></title>
       <url>/2018/02/27/Internet%E9%80%9A%E4%BF%A1(%E4%B8%80)/</url>
       <content type="html"><![CDATA[<h2 id="概述"><a href="/2018/02/27/Internet通信(一)/#概述" class="headerlink" title="概述"></a>概述</h2><p>网络通信的过程十分复杂，本文只简单分析网络通信的过程以及相关的协议概述，从最常见的例子：”从浏览器输入url至呈现整个页面”。分析整个网络通信的过程，希望能对网络通信有个总体的认识，网络通信的整体认识对我们理解网络有非常大的帮助。由于文章过长，我将分为多个章节描述，如若描述有误，敬请指正。</p>
@@ -104,6 +118,8 @@
         <tags>
             
             <tag> Internet </tag>
+            
+            <tag> 计算机网络基础 </tag>
             
         </tags>
         

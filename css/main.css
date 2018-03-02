@@ -36,24 +36,24 @@ h1,h2,h3,h4,h5,h6{
 
 h1 {
     padding-bottom: .3em;
-    font-size: 2em;
+    font-size: 1.5em;
     line-height: 1.2;
 }
 
 h2 {
     padding-bottom: .3em;
-    font-size: 1.45em;
+    font-size: 1.25em;
     line-height: 1.225;
     border-bottom: 1px solid #eee
 }
 
 h3 {
-    font-size: 1.2em;
+    font-size: 1.1em;
     line-height: 1.43
 }
 
 h4 {
-    font-size: 1.25em
+    font-size: 1em
 }
 
 h5 {
