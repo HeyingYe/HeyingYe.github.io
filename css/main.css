@@ -221,7 +221,7 @@ nav a {
     background: #fff;
     flex: 3 1 auto;
     min-height: 320px;
-    max-width: 840px;
+    max-width: 810px;
     width: 100%;
     /*margin-top: 15px;*/
 }
@@ -569,7 +569,7 @@ figure.highlight figcaption{
 
 @media (min-width: 992px) {
     .container {
-        width: 1200px;
+        width: 1170px;
     }
      aside {
         display: block;
