@@ -3,4 +3,5 @@ Thumbs.db
 *.log
 node_modules/
 public/
+db.json
 .deploy*/
