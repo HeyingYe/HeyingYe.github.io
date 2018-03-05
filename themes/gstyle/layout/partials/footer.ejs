@@ -1,0 +1,13 @@
+<footer class="footer">
+    <p>
+        &copy; <%= date(new Date(), 'YYYY') %> <%= config.author || config.title %>
+    </p>
+    <p>
+    	<%= config.title%>
+    </p>
+</footer>
+<%- js('lib/jquery') %>
+<%- js('lib/waves') %>
+<%- js('lib/jquery-ui') %>
+<%- js('lib/jquery.tocify') %>
+<%- js('js/main') %>

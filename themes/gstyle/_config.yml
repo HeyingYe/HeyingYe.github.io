@@ -1,0 +1,41 @@
+# main menu navigation
+menu:
+  home: /
+  archives: /archives
+  about: /about
+  rss: https://github.com/HeyingYe
+
+excerpt_link: Read More #摘要链接文字
+archive_yearly: false #按年存档
+
+# Miscelaneous
+favicon: /favicon.ico
+
+show_post_category: true
+show_post_tags: true
+
+active_nav: true # show active status on nav menu
+
+sidebar: true # whether to show the sidebar
+widgets:
+  - search
+  - category
+  - tag
+  # - tagcloud
+  - archive
+  - recent_posts
+  - links
+links:
+  - title: "GitHub"
+    url: https://github.com/HeyingYe
+    intro: "My Github"
+  - title: "微博"
+    url: https://weibo.com/u/3962539040
+    intro: "HeyingYe WeiBo"
+
+#site statistic
+google_analytics:  
+# baidu_analytics: 392796d51567e848aebf813b65cb8656
+baidu_analytics: e0579a52b8a95746289aeb877c0f84b8
+
+since: 2018
