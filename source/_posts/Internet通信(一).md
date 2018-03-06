@@ -22,7 +22,7 @@ tags:
 这涉及到整个Internet通信的过程，涉及的范围非常大，我粗略归结为以下几个过程：
  - DNS域名解析
  - 确定接收方MAC地址
- - TCP链接
+ - TCP连接
  - HTTP请求
  - 浏览器渲染页面
 
@@ -124,4 +124,13 @@ DNS（Domain Name System 的缩写）域名解析的作用是将域名解析为I
 由于DNS解析的过程十分复杂费时，所以DNS存在着多级缓存，提取DNS缓存的顺序大概如下：浏览器DNS缓存 -- 系统DNS缓存 -- 本地DNS服务器缓存 -- 根域名服务器缓存 -- 顶级域名服务器缓存 -- 次级域名服务器缓存，解析记录的缓存时间由解析成功返回的TTL值（Time to live 的缩写）决定。
 
 ## 总结
-至此，网络的基础知识和DNS域名解析讲完了，下节继续分析**使用IP地址确定MAC地址**和**TCP链接**。
+至此，网络的基础知识和DNS域名解析讲完了，下节继续分析**使用IP地址确定MAC地址**和**TCP连接**。
+
+<br>
+<br>
+<br>
+
+## 参考文献
+ - [互联网协议入门（一）](http://www.ruanyifeng.com/blog/2012/05/internet_protocol_suite_part_i.html)
+
+ - [互联网协议入门（二）](http://www.ruanyifeng.com/blog/2012/06/internet_protocol_suite_part_ii.html)
