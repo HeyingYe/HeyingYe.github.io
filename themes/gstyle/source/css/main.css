@@ -466,20 +466,19 @@ figure.highlight figcaption{
     section.post-content .highlight pre,section.post-content pre {
         padding: 16px;
         overflow: auto;
-        font-size: 12px;
+        font-size: 14px;
         line-height: 1.45;
         background-color: #f7f7f7;
         border: 0;
         border-radius: 3px
     }
-
 }
 
 @media (max-width: 375px){
     section.post-content .highlight pre,section.post-content pre {
         padding: 16px;
         overflow: auto;
-        font-size: 12px;
+        font-size: 14px;
         line-height: 1.45;
         background-color: #f7f7f7;
         border: 0;
