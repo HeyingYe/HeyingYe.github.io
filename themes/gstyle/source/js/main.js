@@ -91,7 +91,7 @@ $(function() {
             //toc
             $('#toc').html('');
             $('#toc').tocify({
-                'selectors': 'h2,h3',
+                'selectors': 'h2,h3,h4',
                 'extendPage': false,
                 'theme': 'none',
                 'scrollHistory':false
