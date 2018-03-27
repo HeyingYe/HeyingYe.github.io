@@ -27,6 +27,12 @@ code_dir: downloads/code
 i18n_dir: :lang
 skip_render:
 
+# add post views
+leancloud_visitors:
+  enable: true
+  app_id: RlVTs39iH2XgPPmtz1SnpBcd-gzGzoHsz
+  app_key: WAah43CakeUFdpSNioyxwswD
+
 # Writing
 new_post_name: :title.md # File name of new posts
 default_layout: post
