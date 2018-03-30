@@ -29,9 +29,9 @@ links:
   - title: "GitHub"
     url: https://github.com/HeyingYe
     intro: "My Github"
-  - title: "微博"
-    url: https://weibo.com/u/3962539040
-    intro: "HeyingYe WeiBo"
+  # - title: "微博"
+  #   url: https://weibo.com/u/3962539040
+  #   intro: "HeyingYe WeiBo"
 
 #site statistic
 google_analytics:  

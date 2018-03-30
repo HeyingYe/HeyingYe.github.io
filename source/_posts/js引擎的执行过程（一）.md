@@ -160,7 +160,11 @@ funEC = {
     //变量对象
     VO: {
         //arguments对象
-        arguments: {a: 2,b: 3},
+        arguments: {
+            a: undefined,
+            b: undefined,
+            length: 2
+        },
 
         //test函数
         test: <test reference>, 
@@ -250,7 +254,7 @@ function foo() {
 foo()
 ```
 
-因为对于闭包有很多不同的理解，包括我看的一些著名书籍，我这里直接以浏览器解析，以浏览器理解的闭包为准来分析闭包，如下图：
+因为对于闭包有很多不同的理解，包括我看的一些书籍(例如js高级程序设计)，我这里直接以浏览器解析，以浏览器理解的闭包为准来分析闭包，如下图：
 ![闭包](img/close.jpg)
 
 如上图所示，chrome浏览器理解闭包是foo，那么按浏览器的标准是如何定义闭包的，我总结为三点：
