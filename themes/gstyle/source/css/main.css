@@ -516,6 +516,9 @@ figure.highlight figcaption{
 }
 
 @media (min-width: 768px) {
+    figure.highlight {
+        font-size: 1.2em;
+    }
     .logo{
         padding: 15px;
     }
