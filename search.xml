@@ -1,0 +1,1089 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search> 
+  
+    
+    <entry>
+      <title><![CDATA[何如使用canvas做图片处理]]></title>
+      <url>/2019/01/12/%E4%BD%95%E5%A6%82%E4%BD%BF%E7%94%A8canvas%E5%81%9A%E5%9B%BE%E7%89%87%E5%A4%84%E7%90%86/</url>
+      <content type="html"><![CDATA[<h2 id="概述"><a href="/2019/01/12/何如使用canvas做图片处理/#概述" class="headerlink" title="概述"></a>概述</h2><p>最近做项目遇到图片处理(图片打码和画线框)的问题，可选方案主要有两个：</p>
+<ol>
+<li>前端使用canvas做图片处理；</li>
+<li>服务端引入图片处理类库做图片处理；</li>
+</ol>
+<p>其实两个方案都可以做，但对于在该场景下：</p>
+<ol>
+<li>在页面上传图片；</li>
+<li>不需要存储图片处理结果且不需要兼容低浏览器；</li>
+</ol>
+<p>在这种场景下，在前端做处理是更好的方案；若选择服务端处理不仅会涉及到图片的上传和下载，还会涉及到服务端对图片的存储和定时清理等等一系列问题，所以本文主要介绍如何使用canvas做图片处理–&gt;打马赛克，理解这种图片处理的思路后，其他形式的图片处理原理也是一样的。</p>
+<h2 id="图片打码"><a href="/2019/01/12/何如使用canvas做图片处理/#图片打码" class="headerlink" title="图片打码"></a>图片打码</h2><h3 id="思路分析"><a href="/2019/01/12/何如使用canvas做图片处理/#思路分析" class="headerlink" title="思路分析"></a>思路分析</h3><p>图片来源主要有两种，一种是直接使用图片URL，另一种是直接操作图片文件对象（File对象）；但是无论哪一种方式，我们处理图片的原理都是一样的，主要是以下三个步骤：</p>
+<ol>
+<li>创建Image对象对图片进行加载；</li>
+<li>加载成功后，将图片写进canvas画布；</li>
+<li>最后在canvas画布取出图片的所有像素点，取出打码位置的RGB值来画马赛克即可</li>
+</ol>
+<p><img src="/2019/01/12/何如使用canvas做图片处理/img/mosaic.jpg" alt="mosaic"></p>
+<h3 id="代码实现"><a href="/2019/01/12/何如使用canvas做图片处理/#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><blockquote>
+<p><strong>1.创建Image对象对图片进行加载；</strong></p>
+</blockquote>
+<p>首先我们要对图片来源分别进行处理，第一种使用图片URL，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">var img  = new Image();</span><br><span class="line">img.src = &quot;https://avatars1.githubusercontent.com/u/25859283?v=4&quot;;</span><br></pre></td></tr></table></figure></p>
+<p>第二种是图片File对象，File对象我们不能直接使用，需要借助URL.createObjectURL()的方法将File对象转成一个可用于图片src属性的新URL对象，这个URL对象是存储在程序内存中的，所以要在不需要使用这个URL对象时，需要手动调用URL.revokeObjectURL() 方法来主动释放该内存，如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">//html</span><br><span class="line">&lt;input type=&quot;file&quot; name=&quot;&quot; value=&quot;&quot;&gt;</span><br><span class="line"></span><br><span class="line">//js</span><br><span class="line">var inputEle = document.querySelector(&quot;input&quot;);</span><br><span class="line">inputEle.addEventListener(&quot;change&quot;, function() &#123;</span><br><span class="line">    var fileObj = this.files[0]</span><br><span class="line">    var img  = new Image();</span><br><span class="line">    /*</span><br><span class="line">    当图片加载完成之后对象URL就不再需要了，释放对象URL</span><br><span class="line">    */</span><br><span class="line">    img.onload = function() &#123;</span><br><span class="line">      URL.revokeObjectURL(this.url);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    img.src = URL.createObjectURL(fileObj);</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure></p>
+<p>注： 若需要获取图片像素或转成dataURL需设置Img的crossOrigin属性来处理跨域问题，即设置img.crossOrigin = ‘’，详情可参考这篇文章<a href="https://www.zhangxinxu.com/wordpress/2018/02/crossorigin-canvas-getimagedata-cors/" target="_blank" rel="noopener">解决canvas图片getImageData,toDataURL跨域问题</a></p>
+<blockquote>
+<p><strong>2.图片加载成功后，将图片写进canvas画布；</strong></p>
+</blockquote>
+<p>将一张加载成功后的图片写进canvas画布非常简单，只需要三行代码即可，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">var canvas = document.querySelector(&quot;canvas&quot;);</span><br><span class="line">var ctx = canvas.getContext(&apos;2d&apos;);</span><br><span class="line">/*</span><br><span class="line">从左上角开始在画布上画图</span><br><span class="line">*/</span><br><span class="line">ctx.drawImage(img, 0, 0)</span><br></pre></td></tr></table></figure>
+<p>但以上代码是直接在页面的canvas元素上绘制图像的，若绘制的操作动作需要多次或反复进行，这样会导致浏览器实时不断渲染和绘制canvas元素所在的复合图层，这会在一定程度上性能页面的性能。所以我们更好的方式是动态创建一个存储在程序内存的canvas元素，然后在该canvas元素上进行画图以及马赛克绘制等等的操作，所有操作完成后直接将结果一次性绘制到页面上的canvas元素上，可提高绘制性能；</p>
+<blockquote>
+<p><strong>3.在动态画布上绘制马赛克；</strong></p>
+</blockquote>
+<p>在动态canvas画布上绘制图像完成后，我们可使用canvas上下文的getImageData()方法获取该图像的所有像素点，如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">var canvas = document.querySelector(&quot;canvas&quot;);</span><br><span class="line">var ctx = canvas.getContext(&apos;2d&apos;);</span><br><span class="line">/*</span><br><span class="line">获取图像的所有像素点</span><br><span class="line">*/</span><br><span class="line">var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);</span><br></pre></td></tr></table></figure></p>
+<p>其中imageData.data就是图像的所有像素点，也就是我们最熟悉的RGBA值，是一个一维数组，类型为Uint8ClampedArray，数组内的所有数值都不会超过2的8次方，该像素点数组内四个数值（R, G, B, A）表示一个像素点，其中A只有两个值，0和255，分别表示透明度0和1，如下<br><img src="/2019/01/12/何如使用canvas做图片处理/img/像素点.jpg" alt="像素点"><br>那么我们可根据图片的宽高得出图像像素点一维数组的长度，即<code>width * height * 4</code>，那么下面我们即可操作图像像素点来画马赛克了，假设我们每个马赛克的大小为10px，如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">var r, g, b;</span><br><span class="line">for(let y = 0; y &lt;= canvas.height; y += 10) &#123;</span><br><span class="line"></span><br><span class="line">    for(let x = 0; x &lt;= canvas.width; x += 10) &#123;</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">        获取具体位置上像素点的RGB值，然后在canvas上重新绘制图片</span><br><span class="line">         */</span><br><span class="line">        r = imageData[(y * canvas.width + x) * 4];</span><br><span class="line">        g = imageData[(y * canvas.width + x) * 4 + 1];</span><br><span class="line">        b = imageData[(y * canvas.width + x) * 4 + 2];</span><br><span class="line"></span><br><span class="line">        color = `rgb($&#123;r&#125;, $&#123;g&#125;, $&#123;b&#125;)`;</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">        在图像具体位置生成马赛克</span><br><span class="line">         */</span><br><span class="line">        ctx.fillStyle = &quot;red&quot;</span><br><span class="line">        ctx.fillRect(x, y, 10, 10)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>马赛克绘制完成后，再次调用canvas上下文的drawImage()方法将动态canvas画到页面上的canvas即可。</p>
+<h2 id="代码封装"><a href="/2019/01/12/何如使用canvas做图片处理/#代码封装" class="headerlink" title="代码封装"></a>代码封装</h2><p>这里将以上代码用面向对象的方式封装起来，实现在指定的区域打码以及画出线框，实现如下</p>
+<h3 id="构造函数"><a href="/2019/01/12/何如使用canvas做图片处理/#构造函数" class="headerlink" title="构造函数"></a>构造函数</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line"> * @param  target      Object                   canvas目标元素</span><br><span class="line"> * @param  image       String|FileObject        图片url或文件对象</span><br><span class="line"> * @param  mosaicSize  Number                   马赛克大小</span><br><span class="line"> * return  dealImage实例对象</span><br><span class="line"> */</span><br><span class="line">function DealImage(&#123;target, image, mosaicSize=20&#125;) &#123;</span><br><span class="line"></span><br><span class="line">    this.canvas = document.querySelector(target);</span><br><span class="line"></span><br><span class="line">    this._canvas = document.createElement(&quot;canvas&quot;);</span><br><span class="line"></span><br><span class="line">    if(!this.canvas &amp;&amp; this.canvas.getContext) return false</span><br><span class="line"></span><br><span class="line">    if(!image) throw new Error(&quot;缺少图片url&quot;)</span><br><span class="line"></span><br><span class="line">    this.opt = &#123;</span><br><span class="line">        image: image,</span><br><span class="line">        mosaicSize: mosaicSize,</span><br><span class="line">        ctx: this.canvas.getContext(&apos;2d&apos;),</span><br><span class="line">        _ctx: this._canvas.getContext(&apos;2d&apos;),</span><br><span class="line">        fileName: this.getFileName(image)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="原型对象"><a href="/2019/01/12/何如使用canvas做图片处理/#原型对象" class="headerlink" title="原型对象"></a>原型对象</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br></pre></td><td class="code"><pre><span class="line">DealImage.prototype = &#123;</span><br><span class="line">    constructor: DealImage,</span><br><span class="line"></span><br><span class="line">    draw: function(_opt) &#123;</span><br><span class="line"></span><br><span class="line">        var img  = new Image(),</span><br><span class="line">            self = this;</span><br><span class="line"></span><br><span class="line">        img.onload = function() &#123;</span><br><span class="line">            /*</span><br><span class="line">            获取图片上的所有像素点</span><br><span class="line">             */</span><br><span class="line">            self.getImageData(img);</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理打码</span><br><span class="line">             */</span><br><span class="line">            if(_opt.mosaic) self.drawMosaic(_opt.mosaic)</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理线框</span><br><span class="line">             */</span><br><span class="line">             if(_opt.frame) self.drawFrame(_opt.frame)</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理成功后，直接覆盖至页面上的目标canvas</span><br><span class="line">             */</span><br><span class="line">            self.opt.ctx.drawImage(self._canvas, 0, 0)</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理成功后，若传进的是file对象则主动释放内存</span><br><span class="line">            */</span><br><span class="line">            if(self.url &amp;&amp; typeof self.opt.image === &quot;object&quot;) &#123;</span><br><span class="line">              URL.revokeObjectURL(self.url);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理成功后的回调函数</span><br><span class="line">             */</span><br><span class="line">            if(typeof _opt.callback == &quot;function&quot;) &#123;</span><br><span class="line">                let imgBase64 = self.canvas.toDataURL(_opt.type)</span><br><span class="line">                _opt.callback(imgBase64, self.opt.fileName)</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">        设置crossOrigin属性解决资源跨域问题，</span><br><span class="line">        不然无法调用getImageData和toDataURL方法</span><br><span class="line">        https://www.zhangxinxu.com/wordpress/2018/02/crossorigin-canvas-getimagedata-cors/</span><br><span class="line">         */</span><br><span class="line">        img.crossOrigin = &apos;&apos;;</span><br><span class="line">        /*</span><br><span class="line">        判断image类型，file对象则使用URL.createObjectURL转换成blob对象</span><br><span class="line">        */</span><br><span class="line">        if(typeof this.opt.image === &quot;string&quot;)&#123;</span><br><span class="line">          img.src = this.opt.image;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">          this.url = URL.createObjectURL(this.opt.image)</span><br><span class="line">          img.src = this.url;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    drawMosaic(_opt) &#123;</span><br><span class="line"></span><br><span class="line">        if(!this.isJson(_opt.position)) throw new TypeError(&quot;参数必须是json数组对象&quot;)</span><br><span class="line"></span><br><span class="line">        var r, g, b, color, self = this;</span><br><span class="line"></span><br><span class="line">        _opt.position.forEach(function(item, index) &#123;</span><br><span class="line"></span><br><span class="line">            if(!self.isObject(item)) return false</span><br><span class="line"></span><br><span class="line">            for(let y = item.start[1]; y &lt;= item.end[1]; y += self.opt.mosaicSize) &#123;</span><br><span class="line"></span><br><span class="line">                for(let x = item.start[0]; x &lt;= item.end[0]; x += self.opt.mosaicSize) &#123;</span><br><span class="line"></span><br><span class="line">                    /*</span><br><span class="line">                    获取具体位置上像素点的RGB值，然后在canvas上重新绘制图片</span><br><span class="line">                     */</span><br><span class="line">                    r = self.imageData[(y * self._canvas.width + x) * 4];</span><br><span class="line">                    g = self.imageData[(y * self._canvas.width + x) * 4 + 1];</span><br><span class="line">                    b = self.imageData[(y * self._canvas.width + x) * 4 + 2];</span><br><span class="line"></span><br><span class="line">                    color = `rgb($&#123;r&#125;, $&#123;g&#125;, $&#123;b&#125;)`;</span><br><span class="line"></span><br><span class="line">                    /*</span><br><span class="line">                    在图像具体位置生成马赛克</span><br><span class="line">                     */</span><br><span class="line">                    self.opt._ctx.fillStyle = color</span><br><span class="line">                    self.opt._ctx.fillRect(x, y, self.opt.mosaicSize, self.opt.mosaicSize)</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;,</span><br><span class="line">    drawFrame: function(_opt) &#123;</span><br><span class="line"></span><br><span class="line">        if(!this.isJson(_opt.position)) throw new TypeError(&quot;参数必须是json数组对象&quot;)</span><br><span class="line"></span><br><span class="line">        var self = this;</span><br><span class="line"></span><br><span class="line">        _opt.position.forEach(function(item, index) &#123;</span><br><span class="line"></span><br><span class="line">            if(!self.isObject(item)) return false</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            起始一条路径，或重置当前路径</span><br><span class="line">             */</span><br><span class="line">            self.opt._ctx.beginPath();</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            把路径移动到画布中的指定点，不创建线条</span><br><span class="line">             */</span><br><span class="line">            self.opt._ctx.moveTo(item.start[0], item.start[1])</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            添加一个新点，然后在画布中创建从该点到最后指定点的线条</span><br><span class="line">             */</span><br><span class="line">            self.opt._ctx.lineTo(item.start[0], item.end[1])</span><br><span class="line">            self.opt._ctx.lineTo(item.end[1], item.end[1])</span><br><span class="line">            self.opt._ctx.lineTo(item.end[0], item.start[1])</span><br><span class="line">            self.opt._ctx.lineTo(item.start[0], item.start[1])</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            绘制已定义的路径</span><br><span class="line">             */</span><br><span class="line">            self.opt._ctx.strokeStyle = _opt.color;</span><br><span class="line">            self.opt._ctx.stroke();</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;,</span><br><span class="line">    isObject: function(obj) &#123;</span><br><span class="line"></span><br><span class="line">        return Object.prototype.toString.call(obj) === &quot;[object Object]&quot;;</span><br><span class="line">    &#125;,</span><br><span class="line">    isJson: function(option) &#123;</span><br><span class="line"></span><br><span class="line">        if(!(option instanceof Array)) return false</span><br><span class="line"></span><br><span class="line">        var self = this, temp = [];</span><br><span class="line"></span><br><span class="line">        option.forEach((item, index) =&gt; &#123;</span><br><span class="line">            temp.push(self.isObject(item))</span><br><span class="line">        &#125;)</span><br><span class="line"></span><br><span class="line">        return temp.length &gt; 0 &amp;&amp; !temp.includes(false)</span><br><span class="line">    &#125;,</span><br><span class="line">    getFileName: function(image) &#123;</span><br><span class="line"></span><br><span class="line">        let filename;</span><br><span class="line">        if(typeof image == &quot;string&quot;) &#123;</span><br><span class="line"></span><br><span class="line">          let tempArr = image.split(&quot;/&quot;);</span><br><span class="line"></span><br><span class="line">          filename = tempArr[tempArr.length - 1].split(&quot;.&quot;)[0];</span><br><span class="line"></span><br><span class="line">        &#125; else &#123;</span><br><span class="line"></span><br><span class="line">          filename = image.name.split(&quot;.&quot;)[0]</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">        return filename;</span><br><span class="line">    &#125;,</span><br><span class="line">    getImageData: function(img) &#123;</span><br><span class="line"></span><br><span class="line">        this.canvas.width = img.width;</span><br><span class="line">        this.canvas.height = img.height;</span><br><span class="line"></span><br><span class="line">        this._canvas.width = img.width;</span><br><span class="line">        this._canvas.height = img.height;</span><br><span class="line"></span><br><span class="line">        this.opt._ctx.drawImage(img, 0, 0)</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">        获取图像像素点</span><br><span class="line">         */</span><br><span class="line">        this.imageData = this.opt._ctx.getImageData(0, 0, this._canvas.width, this._canvas.height).data</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="使用"><a href="/2019/01/12/何如使用canvas做图片处理/#使用" class="headerlink" title="使用"></a>使用</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">//html</span><br><span class="line">&lt;canvas id=&quot;canvas&quot;&gt;&lt;/canvas&gt;</span><br><span class="line">&lt;p&gt;&lt;img src=&quot;&quot; alt=&quot;&quot;&gt;&lt;/p&gt;</span><br><span class="line">&lt;input type=&quot;file&quot; name=&quot;&quot; value=&quot;&quot;&gt;</span><br><span class="line"></span><br><span class="line">//js</span><br><span class="line">var inputEle = document.querySelector(&quot;input&quot;);</span><br><span class="line">inputEle.addEventListener(&quot;change&quot;, function() &#123;</span><br><span class="line">  var img = new DealImage(&#123;</span><br><span class="line">      target: &quot;#canvas&quot;,</span><br><span class="line">      mosaicSize: 10,</span><br><span class="line">      image: this.files[0]</span><br><span class="line">  &#125;)</span><br><span class="line"></span><br><span class="line">  img.draw(&#123;</span><br><span class="line">      type: &quot;image/png&quot;,</span><br><span class="line">      mosaic: &#123;</span><br><span class="line">          position: [</span><br><span class="line">              &#123;start: [50, 50], end: [150, 150]&#125;,</span><br><span class="line">              &#123;start: [200, 200], end: [300, 300]&#125;,</span><br><span class="line">          ],</span><br><span class="line">      &#125;,</span><br><span class="line">      frame: &#123;</span><br><span class="line">          position: [</span><br><span class="line">              &#123;start: [50, 50], end: [150, 150]&#125;,</span><br><span class="line">              &#123;start: [200, 200], end: [300, 300]&#125;,</span><br><span class="line">          ],</span><br><span class="line">          color: &quot;red&quot;</span><br><span class="line">      &#125;,</span><br><span class="line">      callback: function(imgBase64, filename) &#123;</span><br><span class="line"></span><br><span class="line">          let imgEle = document.querySelector(&quot;img&quot;),</span><br><span class="line">              linkEle = document.createElement(&quot;a&quot;);</span><br><span class="line"></span><br><span class="line">          imgEle.src = imgBase64;</span><br><span class="line"></span><br><span class="line">          /*</span><br><span class="line">          下载图片</span><br><span class="line">           */</span><br><span class="line">          // linkEle.style.display = &quot;none&quot;;</span><br><span class="line">          // linkEle.download = filename;</span><br><span class="line">          // linkEle.href = imgBase64;</span><br><span class="line"></span><br><span class="line">          // document.body.appendChild(linkEle);</span><br><span class="line">          // linkEle.click();</span><br><span class="line">          // // 然后移除</span><br><span class="line">          // document.body.removeChild(linkEle);</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<h2 id="总结"><a href="/2019/01/12/何如使用canvas做图片处理/#总结" class="headerlink" title="总结"></a>总结</h2><p>以上便是canvas图片处理思路以及代码实现，代码实现并不复杂。若要使用也可npm i dealimage，然后import DealImage from “dealimage”引进使用。</p>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> canvas </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[柯里化函数应用]]></title>
+      <url>/2018/04/20/%E6%9F%AF%E9%87%8C%E5%8C%96%E5%87%BD%E6%95%B0%E5%BA%94%E7%94%A8/</url>
+      <content type="html"><![CDATA[<h2 id="概述"><a href="/2018/04/20/柯里化函数应用/#概述" class="headerlink" title="概述"></a>概述</h2><p>理解柯里化函数，需要有闭包的基础，只有彻底理解闭包后才能理解柯里化，如果尚未理解闭包，建议阅读上文<a href="https://heyingye.github.io/2018/03/19/js%E5%BC%95%E6%93%8E%E7%9A%84%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89/">js引擎的执行过程（一）</a>；如果理解了闭包再研究柯里化函数，则会大大的加深你对闭包理解，并且更清楚的认识到闭包的应用场景，那么如果在面试时候问到闭包，你就可以侃侃而谈了；并且理解柯里化函数会在很大的程度上提升函数式编程的能力，轻松解决各种复杂的编程问题。</p>
+<p>说了这么多柯里化的好处，接下来我们赶紧学习柯里化吧！</p>
+<p>在维基百科和百度百科中，对柯里化的定义是这样的，如下：<br><strong>柯里化（Currying）是把接受多个参数的函数变换成接受一个单一参数（最初函数的第一个参数）的函数，并且返回接受余下的参数而且返回结果的新函数的技术。</strong></p>
+<p>由以上定义，柯里化又可理解为部分求值，返回接受剩余参数且返回结果的新函数。想要应用柯里化，我们必须先理解柯里化的作用和特点，这里我总结为以下三点：</p>
+<ul>
+<li><p><strong>参数复用 – 复用最初函数的第一个参数</strong></p>
+</li>
+<li><p><strong>提前返回 – 返回接受余下的参数且返回结果的新函数</strong></p>
+</li>
+<li><p><strong>延迟执行 – 返回新函数，等待执行</strong></p>
+</li>
+</ul>
+<p>了解柯里化的作用特点后，我们可以简单理解为当一个函数需要提前处理并需要等待执行或者接受多个不同作用的参数时候，我们便可应用柯里化。单纯讲解概念难免抽象，接下来，我们具体分析柯里化函数的应用。</p>
+<h2 id="应用"><a href="/2018/04/20/柯里化函数应用/#应用" class="headerlink" title="应用"></a>应用</h2><p>如果为了分析柯里化函数而编造一些简单例子去分析，那么难免会体现不出来柯里化的作用，而且也会仅限于理解柯里化而不知道应该在什么场景下应用柯里化函数，所以这里直接用我们在编程中经常接触的例子进行柯里化函数封装，并以此来理解柯里化函数。在编程开发中，使用柯里化函数封装解决问题的例子主要有：</p>
+<ul>
+<li><p><strong>兼容浏览器事件监听方法 </strong></p>
+</li>
+<li><p><strong>性能优化：防抖和节流</strong></p>
+</li>
+<li><p><strong>兼容低版本IE的bind方法</strong></p>
+</li>
+</ul>
+<p>本文主要对上面三个场景案例进行详细分析，案例难度大小为从上至下，全面介绍柯里化函数，希望能帮助大家理解柯里化。</p>
+<h3 id="事件监听"><a href="/2018/04/20/柯里化函数应用/#事件监听" class="headerlink" title="事件监听"></a>事件监听</h3><p>原生事件监听的方法在现代浏览器和IE浏览器会有兼容问题，解决该兼容性问题的方法是进行一层封装，若不考虑柯里化函数，我们正常情况下会像下面这样进行封装，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line">* @param    ele        Object      DOM元素对象</span><br><span class="line">* @param    type       String      事件类型</span><br><span class="line">* @param    fn         Function    事件处理函数</span><br><span class="line">* @param    isCapture  Boolean     是否捕获</span><br><span class="line">*/</span><br><span class="line">var addEvent = function(ele, type, fn, isCapture) &#123;</span><br><span class="line">    if(window.addEventListener) &#123;</span><br><span class="line"></span><br><span class="line">        ele.addEventListener(type, fn, isCapture)</span><br><span class="line"></span><br><span class="line">    &#125; else if(window.attachEvent) &#123;</span><br><span class="line"></span><br><span class="line">        ele.attachEvent(&quot;on&quot; + type, fn)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>该封装方法完全没有问题，但是有个唯一的缺陷就是，当我们每次调用<code>addEvent</code>方法时，都会执行一次<code>if...else if...</code>，进行一次兼容判断。其实每次都执行兼容判断是完全没有必要的，那有没有办法只做一次判断呢？这个时候，柯里化函数就派上用场了，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">var addEvent = (function() &#123;</span><br><span class="line">    if(window.addEventListener) &#123;</span><br><span class="line">        return function(ele, type, fn, isCapture) &#123;</span><br><span class="line">            ele.addEventListener(type, fn, isCapture)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else if(window.attachEvent) &#123;</span><br><span class="line">        return function(ele, type, fn) &#123;</span><br><span class="line">             ele.attachEvent(&quot;on&quot; + type, fn)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;)()</span><br></pre></td></tr></table></figure></p>
+<p>这个例子利用了柯里化<strong>提前返回</strong>和<strong>延迟执行</strong>的特点，如下：</p>
+<ul>
+<li><p>提前返回 – 使用函数立即调用进行了一次兼容判断（部分求值），返回兼容的事件绑定方法</p>
+</li>
+<li><p>延迟执行 – 返回新函数，在新函数调用兼容的事件方法。等待<code>addEvent</code>新函数调用，延迟执行</p>
+</li>
+</ul>
+<p>这就是柯里化函数的基本用法 – <strong>提前返回</strong>和<strong>延迟执行</strong>，但是这里没有利用到柯里化参数复用的特点，接下来我们继续分析防抖和节流。</p>
+<h3 id="防抖和节流"><a href="/2018/04/20/柯里化函数应用/#防抖和节流" class="headerlink" title="防抖和节流"></a>防抖和节流</h3><p>在web开发中，页面高频率触发的事件非常多，例如scroll,resize,mousemove等等，但是浏览器页面渲染的帧频为60fps，意思就是每秒刷新60帧，每1000/60约等于16.7ms刷新一次帧。</p>
+<blockquote>
+<p>我们试想一下，如果高频事件的触发频率过快，以大于或者远大于16.7ms/帧的频率触发，会出现什么问题？</p>
+</blockquote>
+<p>事件触发频率大于浏览器的显示频率(16.7ms/帧)，即浏览器显示跟不上事件触发的频率，若事件处理函数中涉及DOM操作，则会导致浏览器掉帧，继而导致动画断续显示，画面粘滞，在很大程度上影响用户体验。</p>
+<blockquote>
+<p>如果在高频事件以大于16.7ms/帧的速度进行，并且在该事件处理函数中进行大量的计算或DOM操作，会出现什么问题？</p>
+</blockquote>
+<p>由于该事件处理函数复杂且触发过于频繁，会导致上一次事件触发的操作计算无法在下一次事件触发前完成，则会使浏览器CPU使用率不断增加，继而造成浏览器卡顿甚至崩溃，如下图所示：<br><img src="/2018/04/20/柯里化函数应用/img/GIF.gif" alt="example"><br>注：注意观察图片左边的控制台输出以及右边浏览器任务管理器的CPU使用率。</p>
+<p>由上面的问题，我们可以知道，使用高频事件时必须先解决其潜在的问题，才能保证页面性能。针对以上问题，我们可用以下两点方法从根本上上解决问题，如下：</p>
+<ul>
+<li><p>高频事件处理函数，不应该含有复杂的操作，例如DOM操作和复杂计算（DOM操作一般会造成页面回流和重绘，使浏览器不断重新渲染页面，若有疑问可阅读上文 – <a href="https://heyingye.github.io/2018/03/13/%E6%B5%8F%E8%A7%88%E5%99%A8%E6%B8%B2%E6%9F%93%E8%BF%87%E7%A8%8B/">浏览器渲染过程</a>）。</p>
+</li>
+<li><p>控制高频事件的触发频率</p>
+</li>
+</ul>
+<blockquote>
+<p>控制高频事件的触发频率是关键点，但是事件触发是原生事件监听方法进行监听的，那么我们该如何控制？</p>
+</blockquote>
+<p>如果我们能延迟事件处理函数的执行，那么就相当于控制了事件的触发频率，然后再通过保存执行状态来控制事件处理函数的执行，那么整个问题就可以迎刃而解了。</p>
+<p>其中防抖和节流对高频事件进行优化的原理就是<strong>通过延迟执行，将多个间隔接近的函数执行合并成一次函数执行。</strong>下面将会详细讲解。</p>
+<h4 id="防抖（Debouncing）"><a href="/2018/04/20/柯里化函数应用/#防抖（Debouncing）" class="headerlink" title="防抖（Debouncing）"></a>防抖（Debouncing）</h4><p><strong>针对高频事件，防抖就是将多个触发间隔接近的事件函数执行，合并成一次函数执行。</strong></p>
+<p>实现防抖的关键点主要有两个，如下：</p>
+<ul>
+<li><p>使用setTimeout延时器，传入的延迟时间，将事件处理函数延迟执行，并且通过事件触发频率与延迟时间值的比较，控制处理函数是否执行</p>
+</li>
+<li><p>使用柯里化函数结合闭包的思想，将执行状态保存在闭包中，返回新函数，在新函数中通过执行状态控制是否在滚动时执行处理函数</p>
+</li>
+</ul>
+<p>实现代码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line">* @param    fn              Function    事件处理函数</span><br><span class="line">* @param    delay           Number      延迟时间</span><br><span class="line">* @param    isImmediate     Boolean     是否滚动时立刻执行</span><br><span class="line">* @return   Function                    事件处理函数</span><br><span class="line">*/</span><br><span class="line">var debounce = function(fn, delay, isImmediate) &#123;</span><br><span class="line">    //使用闭包，保存执行状态，控制函数调用顺序</span><br><span class="line">    var timer;</span><br><span class="line"></span><br><span class="line">    return function() &#123;</span><br><span class="line">        var _args = [].slice.call(arguments),</span><br><span class="line">            context = this;</span><br><span class="line"></span><br><span class="line">        clearTimeout(timer);</span><br><span class="line">    </span><br><span class="line">        var _fn = function() &#123;</span><br><span class="line">            timer = null;</span><br><span class="line">            if (!isImmediate) fn.apply(context, _args);</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        //是否滚动时立刻执行</span><br><span class="line">        var callNow = !timer &amp;&amp; isImmediate;</span><br><span class="line"></span><br><span class="line">        timer = setTimeout(_fn, delay);</span><br><span class="line"></span><br><span class="line">        if(callNow) fn.apply(context, _args);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>防抖技术使用如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">var debounceScroll = debounce(function() &#123;</span><br><span class="line">    //事件处理函数，滚动时进行的处理</span><br><span class="line"></span><br><span class="line">&#125;, 100)</span><br><span class="line"></span><br><span class="line">window.addEventListener(&quot;scroll&quot;, debounceScroll)</span><br></pre></td></tr></table></figure></p>
+<p>防抖技术仅靠传入延迟时间值的大小控制高频事件的触发频率，如果传入的延迟时间值比较大，那么就会出现一定的问题。例如当传入延迟时间为1000ms，那么当用户滚动速度大于1000ms/次时，则无论鼠标滚动多久都不会触发事件处理函数。因此防抖技术存在一定的缺陷，会不适用于某些场景，例如图片懒加载。这个时候节流就派上用场了。</p>
+<h4 id="节流（Throttle）"><a href="/2018/04/20/柯里化函数应用/#节流（Throttle）" class="headerlink" title="节流（Throttle）"></a>节流（Throttle）</h4><p><strong>节流也是将多个触发间隔接近的事件函数执行，合并成一次函数执行，并且在指定的时间内至少执行一次事件处理函数。</strong></p>
+<p>节流实现原理跟防抖技术类似，但是比防抖多了一次函数执行判断，实现的关键点是：</p>
+<ul>
+<li>利用闭包存储了当前和上一次执行的时间戳，通过两次函数执行的时间差跟指定的延迟时间的比较，控制函数是否立刻执行</li>
+</ul>
+<p>实现代码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line">* @param    fn          Function    事件处理函数</span><br><span class="line">* @param    wait        Number      延迟时间</span><br><span class="line">* @return   Function                事件处理函数</span><br><span class="line">*/</span><br><span class="line">var throttle = function(fn, wait) &#123;</span><br><span class="line">    var timer, previous, now, diff;</span><br><span class="line">    return function() &#123;</span><br><span class="line">        var _args = [].slice.call(arguments),</span><br><span class="line">            context = this;</span><br><span class="line">        //储存当前时间戳</span><br><span class="line">        now = Date.now();</span><br><span class="line"></span><br><span class="line">        var _fn = function() &#123;</span><br><span class="line">            //存储上一次执行的时间戳</span><br><span class="line">            previous = Date.now();</span><br><span class="line">            timer = null;</span><br><span class="line">            fn.apply(context, _args)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        clearTimeout(timer)</span><br><span class="line"></span><br><span class="line">        if(previous !== undefined) &#123;</span><br><span class="line">            //时间差</span><br><span class="line">            diff = now - previous;</span><br><span class="line">            if(diff &gt;= wait) &#123;</span><br><span class="line">                fn.apply(context, _args);</span><br><span class="line">                previous = now;</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                timer = setTimeout(_fn, wait);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;else&#123;</span><br><span class="line">            _fn();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>注：以上防抖和节流函数封装是根据个人理解进行封装的，若想对比不同的封装方法，建议阅读第三方underscore函数库中的throttle和debounce的实现方法，原理大致是一样的，但是封装思维稍有不同。</p>
+<p>拓展：</p>
+<blockquote>
+<p>以上的节流和防抖技术都是用setTimeout实现的，是否有其他的实现方案，性能是否会更好？</p>
+</blockquote>
+<p>可直接使用浏览器帧频刷新自动调用的方法(requestAnimationFrame)实现，实现起来会更加简单，而且性能会更好，但是唯一缺点就是需要自行解决低版本的IE浏览器兼容问题，实现代码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">//解决requestAnimationFrame兼容问题</span><br><span class="line">var raFrame = window.requestAnimationFrame ||</span><br><span class="line">              window.webkitRequestAnimationFrame ||</span><br><span class="line">              window.mozRequestAnimationFrame ||</span><br><span class="line">              window.oRequestAnimationFrame ||</span><br><span class="line">              window.msRequestAnimationFrame ||</span><br><span class="line">              function(callback) &#123;</span><br><span class="line">                  window.setTimeout(callback, 1000 / 60);</span><br><span class="line">              &#125;;</span><br><span class="line"></span><br><span class="line">//柯里化封装</span><br><span class="line">var rafThrottle = function(fn) &#123;</span><br><span class="line">    var isLocked;</span><br><span class="line">    return function() &#123;</span><br><span class="line">        var context = this,</span><br><span class="line">            _args = arguments;</span><br><span class="line"></span><br><span class="line">        if(isLocked) return </span><br><span class="line"></span><br><span class="line">        isLocked = true;</span><br><span class="line">        raFrame(function() &#123;</span><br><span class="line">            isLocked = false;</span><br><span class="line">            fn.apply(context, _args)</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="bind函数柯里化"><a href="/2018/04/20/柯里化函数应用/#bind函数柯里化" class="headerlink" title="bind函数柯里化"></a>bind函数柯里化</h3><p>函数的bind方法相信我们都不陌生，但是低版本的IE浏览器不兼容bind方法，想要继续在低版本的IE浏览器中使用bind方法，则需要我们自行封装bind方法，实现的关键点是：</p>
+<ul>
+<li>bind方法改变this指向，却不会执行原函数，那么我们可利用柯里化延迟执行，参数复用和提前返回的特点，返回新函数，在新函数使用apply方法执行原函数</li>
+</ul>
+<p>我们这里将bind方法封装分为两种情况，如下：</p>
+<ul>
+<li><p>第一种：简单的bind方法封装（不考虑构造函数，仅用于普通函数），实现代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">if (!Function.prototype.bind) &#123;</span><br><span class="line">    Function.prototype.bind = function(context) &#123;</span><br><span class="line">        if(context.toString() !== &quot;[object Object]&quot; &amp;&amp; context.toString() !== &quot;[object Window]&quot; ) &#123;</span><br><span class="line">            throw TypeError(&quot;context is not a Object.&quot;)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        var _this = this;</span><br><span class="line">        var args = [].slice.call(arguments, 1);</span><br><span class="line"></span><br><span class="line">        return function() &#123;</span><br><span class="line">            var _args = [].slice.call(arguments);</span><br><span class="line">            </span><br><span class="line">            _this.apply(context, _args.concat(args))</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>第二种：复杂情况（考虑bind的任何用法），这里直接使用<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind" target="_blank" rel="noopener">MDN</a>的bind兼容方法，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">if (!Function.prototype.bind) &#123;</span><br><span class="line">  Function.prototype.bind = function(oThis) &#123;</span><br><span class="line">    if (typeof this !== &apos;function&apos;) &#123;</span><br><span class="line">      // closest thing possible to the ECMAScript 5</span><br><span class="line">      // internal IsCallable function</span><br><span class="line">      throw new TypeError(&apos;Function.prototype.bind - what is trying to be bound is not callable&apos;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    var aArgs   = Array.prototype.slice.call(arguments, 1),</span><br><span class="line">        fToBind = this,</span><br><span class="line">        fNOP    = function() &#123;&#125;,</span><br><span class="line">        fBound  = function() &#123;</span><br><span class="line">          return fToBind.apply(this instanceof fNOP</span><br><span class="line">                 ? this</span><br><span class="line">                 : oThis,</span><br><span class="line">                 // 获取调用时(fBound)的传参.bind 返回的函数入参往往是这么传递的</span><br><span class="line">                 aArgs.concat(Array.prototype.slice.call(arguments)));</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">    // 维护原型关系</span><br><span class="line">    if (this.prototype) &#123;</span><br><span class="line">      // Function.prototype doesn&apos;t have a prototype property</span><br><span class="line">      fNOP.prototype = this.prototype; </span><br><span class="line">    &#125;</span><br><span class="line">    fBound.prototype = new fNOP();</span><br><span class="line"></span><br><span class="line">    return fBound;</span><br><span class="line">  &#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>要理解复杂的bind兼容方法，必须彻底理解以下四个基础知识：</p>
+<ul>
+<li><p>js的原型对象</p>
+</li>
+<li><p>构造函数使用new操作符的过程</p>
+</li>
+<li><p>this的指向问题</p>
+</li>
+<li><p>熟悉bind方法的使用场景</p>
+</li>
+</ul>
+<p>围绕以上四个关键点思考，bind的封装思想便可理解，这里不做过多解释。</p>
+<h2 id="柯里化函数封装"><a href="/2018/04/20/柯里化函数应用/#柯里化函数封装" class="headerlink" title="柯里化函数封装"></a>柯里化函数封装</h2><p>分析了柯里化的各种使用场景，相信我们已经大概感受到柯里化的好处了 – <strong>部分求值，将复杂问题分步求解，变得更简单化</strong>。这里我们可以尝试封装一个简单的柯里化函数，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">function createCurry(fn) &#123;</span><br><span class="line">    if(typeof fn !== &quot;function&quot;)&#123;</span><br><span class="line">        throw TypeError(&quot;fn is not function.&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    //复用第一个参数</span><br><span class="line">    var args = [].slice.call(arguments, 1);</span><br><span class="line">    //返回新函数</span><br><span class="line">    return function()&#123;</span><br><span class="line">        //收集剩余参数</span><br><span class="line">        var _args = [].slice.call(arguments);</span><br><span class="line">        //返回结果</span><br><span class="line">        return fn.apply(this, args.concat(_args));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>柯里化函数的特点如上注释所示：</p>
+<ul>
+<li><p>复用第一个参数</p>
+</li>
+<li><p>返回新函数</p>
+</li>
+<li><p>收集剩余参数</p>
+</li>
+<li><p>返回结果</p>
+</li>
+</ul>
+<p>柯里化函数的简单例子应用，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">//add(19)(10, 20, 30)，求该函数传递的参数和</span><br><span class="line"></span><br><span class="line">var add = createCurry(function() &#123;</span><br><span class="line">    //获取所有参数</span><br><span class="line">    var args = [].slice.call(arguments);</span><br><span class="line"></span><br><span class="line">    //返回累加结果</span><br><span class="line">    return args.reduce(function(accumulator, currentValue) &#123;</span><br><span class="line">        return accumulator + currentValue</span><br><span class="line">    &#125;)</span><br><span class="line">&#125;, 19)</span><br><span class="line"></span><br><span class="line">add(10, 20, 30);    //79</span><br></pre></td></tr></table></figure></p>
+<h2 id="总结"><a href="/2018/04/20/柯里化函数应用/#总结" class="headerlink" title="总结"></a>总结</h2><p>以上便是柯里化函数的基本应用以及原理，希望可以提升大家对柯里化函数以及函数式编程的理解，如有错误，敬请指正。</p>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> javascript </tag>
+            
+            <tag> currying </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[彻底理解浏览器的缓存机制]]></title>
+      <url>/2018/04/16/%E5%BD%BB%E5%BA%95%E7%90%86%E8%A7%A3%E6%B5%8F%E8%A7%88%E5%99%A8%E7%9A%84%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6/</url>
+      <content type="html"><![CDATA[<h2 id="概述"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#概述" class="headerlink" title="概述"></a>概述</h2><p>浏览器的缓存机制也就是我们说的HTTP缓存机制，其机制是根据HTTP报文的缓存标识进行的，所以在分析浏览器缓存机制之前，我们先使用图文简单介绍一下HTTP报文，<strong>HTTP报文</strong>分为两种：</p>
+<ul>
+<li><strong>HTTP请求(Request)报文</strong>，报文格式为：<strong>请求行 – HTTP头(通用信息头，请求头，实体头) – 请求报文主体(只有POST才有报文主体)</strong>，如下图<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/Request.jpg" alt="Request"><br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/Request-header.jpg" alt="Request"></li>
+</ul>
+<ul>
+<li><strong>HTTP响应(Response)报文</strong>，报文格式为：<strong>状态行 – HTTP头(通用信息头，响应头，实体头) – 响应报文主体</strong>，如下图<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/Response-header.jpg" alt="Response"><br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/Response.jpg" alt="Response"></li>
+</ul>
+<p>注：<strong>通用信息头</strong>指的是请求和响应报文都支持的头域，分别为Cache-Control、Connection、Date、Pragma、Transfer-Encoding、Upgrade、Via；<strong>实体头</strong>则是实体信息的实体头域，分别为Allow、Content-Base、Content-Encoding、Content-Language、Content-Length、Content-Location、Content-MD5、Content-Range、Content-Type、Etag、Expires、Last-Modified、extension-header。这里只是为了方便理解，将通用信息头，响应头/请求头，实体头都归为了HTTP头。</p>
+<p>以上的概念在这里我们不做多讲解，只简单介绍，有兴趣的童鞋可以自行研究。</p>
+<h2 id="缓存过程分析"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#缓存过程分析" class="headerlink" title="缓存过程分析"></a>缓存过程分析</h2><p>浏览器与服务器通信的方式为应答模式，即是：<strong>浏览器发起HTTP请求 – 服务器响应该请求</strong>。那么浏览器第一次向服务器发起该请求后拿到请求结果，会根据响应报文中HTTP头的缓存标识，决定是否缓存结果，是则将请求结果和缓存标识存入浏览器缓存中，简单的过程如下图：<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/cache.jpg" alt="cache"></p>
+<p>由上图我们可以知道：</p>
+<ul>
+<li><p>浏览器每次发起请求，都会先在浏览器缓存中查找该请求的结果以及缓存标识</p>
+</li>
+<li><p>浏览器每次拿到返回的请求结果都会将该结果和缓存标识存入浏览器缓存中</p>
+</li>
+</ul>
+<p>以上两点结论就是浏览器缓存机制的关键，他确保了每个请求的缓存存入与读取，只要我们再理解浏览器缓存的使用规则，那么所有的问题就迎刃而解了，本文也将围绕着这点进行详细分析。为了方便大家理解，这里我们根据是否需要向服务器重新发起HTTP请求将缓存过程分为两个部分，分别是<strong>强制缓存</strong>和<strong>协商缓存 </strong>。</p>
+<h3 id="强制缓存"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#强制缓存" class="headerlink" title="强制缓存"></a>强制缓存</h3><p><strong>强制缓存就是向浏览器缓存查找该请求结果，并根据该结果的缓存规则来决定是否使用该缓存结果的过程</strong>，强制缓存的情况主要有三种(暂不分析协商缓存过程)，如下：</p>
+<ul>
+<li><p>不存在该缓存结果和缓存标识，强制缓存失效，则直接向服务器发起请求（跟第一次发起请求一致），如下图：<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/cache1.0.jpg" alt="cache"></p>
+</li>
+<li><p>存在该缓存结果和缓存标识，但该结果已失效，强制缓存失效，则使用协商缓存(暂不分析)，如下图<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/cache1.1.jpg" alt="cache"></p>
+</li>
+<li><p>存在该缓存结果和缓存标识，且该结果尚未失效，强制缓存生效，直接返回该结果，如下图<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/cache1.2.jpg" alt="cache"></p>
+</li>
+</ul>
+<blockquote>
+<p>那么强制缓存的缓存规则是什么？</p>
+</blockquote>
+<p>当浏览器向服务器发起请求时，服务器会将缓存规则放入HTTP响应报文的HTTP头中和请求结果一起返回给浏览器，控制强制缓存的字段分别是<strong>Expires</strong>和<strong>Cache-Control</strong>，其中Cache-Control优先级比Expires高。</p>
+<h4 id="Expires"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#Expires" class="headerlink" title="Expires"></a>Expires</h4><p>Expires是HTTP/1.0控制网页缓存的字段，其值为服务器返回该请求结果缓存的到期时间，即再次发起该请求时，如果客户端的时间小于Expires的值时，直接使用缓存结果。</p>
+<blockquote>
+<p>Expires是HTTP/1.0的字段，但是现在浏览器默认使用的是HTTP/1.1，那么在HTTP/1.1中网页缓存还是否由Expires控制？</p>
+</blockquote>
+<p>到了HTTP/1.1，Expire已经被Cache-Control替代，原因在于Expires控制缓存的原理是使用客户端的时间与服务端返回的时间做对比，那么如果客户端与服务端的时间因为某些原因（例如时区不同；客户端和服务端有一方的时间不准确）发生误差，那么强制缓存则会直接失效，这样的话强制缓存的存在则毫无意义，那么Cache-Control又是如何控制的呢？</p>
+<h4 id="Cache-Control"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#Cache-Control" class="headerlink" title="Cache-Control"></a>Cache-Control</h4><p>在HTTP/1.1中，Cache-Control是最重要的规则，主要用于控制网页缓存，主要取值为：</p>
+<ul>
+<li><p><strong>public</strong>：所有内容都将被缓存（客户端和代理服务器都可缓存）</p>
+</li>
+<li><p><strong>private</strong>：所有内容只有客户端可以缓存，<strong>Cache-Control的默认取值</strong></p>
+</li>
+<li><p><strong>no-cache</strong>：客户端缓存内容，但是是否使用缓存则需要经过协商缓存来验证决定</p>
+</li>
+<li><p><strong>no-store</strong>：所有内容都不会被缓存，即不使用强制缓存，也不使用协商缓存</p>
+</li>
+<li><p><strong>max-age=xxx (xxx is numeric)</strong>：缓存内容将在xxx秒后失效</p>
+</li>
+</ul>
+<p>接下来，我们直接看一个例子，如下：<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/example1.0.jpg" alt="example"></p>
+<p>由上面的例子我们可以知道：</p>
+<ul>
+<li><p>HTTP响应报文中expires的时间值，是一个绝对值</p>
+</li>
+<li><p>HTTP响应报文中Cache-Control为max-age=600，是相对值</p>
+</li>
+</ul>
+<p>由于Cache-Control的优先级比expires，那么直接根据Cache-Control的值进行缓存，意思就是说在600秒内再次发起该请求，则会直接使用缓存结果，强制缓存生效。</p>
+<p>注：在无法确定客户端的时间是否与服务端的时间同步的情况下，Cache-Control相比于expires是更好的选择，所以同时存在时，只有Cache-Control生效。</p>
+<p>了解强制缓存的过程后，我们拓展性的思考一下：</p>
+<blockquote>
+<p>浏览器的缓存存放在哪里，如何在浏览器中判断强制缓存是否生效？</p>
+</blockquote>
+<p><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/disk.jpg" alt="disk"><br>这里我们以博客的请求为例，状态码为灰色的请求则代表使用了强制缓存，请求对应的Size值则代表该缓存存放的位置，分别为<strong>from memory cache</strong> 和 <strong>from disk cache</strong>。</p>
+<blockquote>
+<p>那么from memory cache 和 from disk cache又分别代表的是什么呢？什么时候会使用from disk cache，什么时候会使用from memory cache呢？</p>
+</blockquote>
+<p>from memory cache代表使用内存中的缓存，from disk cache则代表使用的是硬盘中的缓存，浏览器读取缓存的顺序为memory –&gt; disk。</p>
+<p>虽然我已经直接把结论说出来了，但是相信有不少人对此不能理解，那么接下来我们一起详细分析一下缓存读取问题，这里仍让以我的博客为例进行分析：<br><strong>访问<a href="https://heyingye.github.io/">https://heyingye.github.io/</a>  –&gt;  200  –&gt;  关闭博客的标签页  –&gt;  重新打开<a href="https://heyingye.github.io/">https://heyingye.github.io/</a>  –&gt;  200(from disk cache) –&gt;  刷新  –&gt;  200(from memory cache)</strong></p>
+<p>过程如下：</p>
+<ul>
+<li><p>访问<a href="https://heyingye.github.io/">https://heyingye.github.io/</a><br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/1.0.jpg" alt="200"></p>
+</li>
+<li><p>关闭博客的标签页</p>
+</li>
+<li><p>重新打开<a href="https://heyingye.github.io/">https://heyingye.github.io/</a><br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/2.0.jpg" alt="from disk cache"></p>
+</li>
+<li><p>刷新<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/3.0.jpg" alt="from disk memory"></p>
+</li>
+</ul>
+<blockquote>
+<p>看到这里可能有人小伙伴问了，最后一个步骤刷新的时候，不是同时存在着from disk cache和from memory cache吗？</p>
+</blockquote>
+<p>对于这个问题，我们需要了解内存缓存(from memory cache)和硬盘缓存(from disk cache)，如下:</p>
+<ul>
+<li><p><strong>内存缓存(from memory cache)</strong>：内存缓存具有两个特点，分别是<strong>快速读取</strong>和<strong>时效性</strong>：</p>
+<ul>
+<li><p><strong>快速读取</strong>：内存缓存会将编译解析后的文件，直接存入该进程的内存中，占据该进程一定的内存资源，以方便下次运行使用时的快速读取。</p>
+</li>
+<li><p><strong>时效性</strong>：一旦该进程关闭，则该进程的内存则会清空。</p>
+</li>
+</ul>
+</li>
+<li><p><strong>硬盘缓存(from disk cache)</strong>：硬盘缓存则是直接将缓存写入硬盘文件中，读取缓存需要对该缓存存放的硬盘文件进行I/O操作，然后重新解析该缓存内容，读取复杂，速度比内存缓存慢。</p>
+</li>
+</ul>
+<p>在浏览器中，浏览器会在js和图片等文件解析执行后直接存入内存缓存中，那么当刷新页面时只需直接从内存缓存中读取(from memory cache)；而css文件则会存入硬盘文件中，所以每次渲染页面都需要从硬盘读取缓存(from disk cache)。</p>
+<h3 id="协商缓存"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#协商缓存" class="headerlink" title="协商缓存"></a>协商缓存</h3><p><strong>协商缓存就是强制缓存失效后，浏览器携带缓存标识向服务器发起请求，由服务器根据缓存标识决定是否使用缓存的过程</strong>，主要有以下两种情况：</p>
+<ul>
+<li><p>协商缓存生效，返回304，如下<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/304.jpg" alt="304"></p>
+</li>
+<li><p>协商缓存失效，返回200和请求结果结果，如下<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/200.jpg" alt="200"></p>
+</li>
+</ul>
+<p>同样，协商缓存的标识也是在响应报文的HTTP头中和请求结果一起返回给浏览器的，控制协商缓存的字段分别有：<strong>Last-Modified / If-Modified-Since和Etag / If-None-Match</strong>，其中Etag / If-None-Match的优先级比Last-Modified / If-Modified-Since高。</p>
+<h4 id="Last-Modified-If-Modified-Since"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#Last-Modified-If-Modified-Since" class="headerlink" title="Last-Modified / If-Modified-Since"></a>Last-Modified / If-Modified-Since</h4><ul>
+<li><p>Last-Modified是服务器响应请求时，返回该资源文件在服务器最后被修改的时间，如下。<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/last-modify.jpg" alt="last-modify"></p>
+</li>
+<li><p>If-Modified-Since则是客户端再次发起该请求时，携带上次请求返回的Last-Modified值，通过此字段值告诉服务器该资源上次请求返回的最后被修改时间。服务器收到该请求，发现请求头含有If-Modified-Since字段，则会根据If-Modified-Since的字段值与该资源在服务器的最后被修改时间做对比，若服务器的资源最后被修改时间大于If-Modified-Since的字段值，则重新返回资源，状态码为200；否则则返回304，代表资源无更新，可继续使用缓存文件，如下。<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/since.jpg" alt="since"></p>
+</li>
+</ul>
+<h4 id="Etag-If-None-Match"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#Etag-If-None-Match" class="headerlink" title="Etag / If-None-Match"></a>Etag / If-None-Match</h4><ul>
+<li><p>Etag是服务器响应请求时，返回当前资源文件的一个唯一标识(由服务器生成)，如下。<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/Etag.jpg" alt="Etag"></p>
+</li>
+<li><p>If-None-Match是客户端再次发起该请求时，携带上次请求返回的唯一标识Etag值，通过此字段值告诉服务器该资源上次请求返回的唯一标识值。服务器收到该请求后，发现该请求头中含有If-None-Match，则会根据If-None-Match的字段值与该资源在服务器的Etag值做对比，一致则返回304，代表资源无更新，继续使用缓存文件；不一致则重新返回资源文件，状态码为200，如下。<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/Etag-match.jpg" alt="Etag-match"></p>
+</li>
+</ul>
+<p>注：Etag / If-None-Match优先级高于Last-Modified / If-Modified-Since，同时存在则只有Etag / If-None-Match生效。</p>
+<h2 id="总结"><a href="/2018/04/16/彻底理解浏览器的缓存机制/#总结" class="headerlink" title="总结"></a>总结</h2><p>强制缓存优先于协商缓存进行，若强制缓存(Expires和Cache-Control)生效则直接使用缓存，若不生效则进行协商缓存(Last-Modified / If-Modified-Since和Etag / If-None-Match)，协商缓存由服务器决定是否使用缓存，若协商缓存失效，那么代表该请求的缓存失效，重新获取请求结果，再存入浏览器缓存中；生效则返回304，继续使用缓存，主要过程如下：<br><img src="/2018/04/16/彻底理解浏览器的缓存机制/img/all.jpg" alt="all"></p>
+<p>以上便是浏览器缓存的过程，若有错误之处，敬请指正。</p>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> Browser </tag>
+            
+            <tag> http-cache </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[js引擎的执行过程（二）]]></title>
+      <url>/2018/03/26/js%E5%BC%95%E6%93%8E%E7%9A%84%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B%EF%BC%88%E4%BA%8C%EF%BC%89/</url>
+      <content type="html"><![CDATA[<h2 id="概述"><a href="/2018/03/26/js引擎的执行过程（二）/#概述" class="headerlink" title="概述"></a>概述</h2><p>js引擎执行过程主要分为三个阶段，分别是语法分析，预编译和执行阶段，上篇文章我们介绍了语法分析和预编译阶段，那么我们先做个简单概括，如下：</p>
+<ul>
+<li><p><strong>语法分析</strong>： 分别对加载完成的代码块进行语法检验，语法正确则进入预编译阶段；不正确则停止该代码块的执行，查找下一个代码块并进行加载，加载完成再次进入该代码块的语法分析阶段</p>
+</li>
+<li><p><strong>预编译</strong>：通过语法分析阶段后，进入预编译阶段，则创建变量对象（创建arguments对象（函数运行环境下），函数声明提前解析，变量声明提升），确定作用域链以及this指向。</p>
+</li>
+</ul>
+<p>如还有疑问回头看看上篇文章<a href="https://heyingye.github.io/2018/03/19/js%E5%BC%95%E6%93%8E%E7%9A%84%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89/">js引擎的执行过程（一）</a>。<br><br><br>本文主要分析js引擎执行的第三个阶段–<strong>执行阶段</strong>，在分析之前我们先思考以下两个问题：</p>
+<blockquote>
+<p>js是单线程的，为了避免代码解析阻塞使用了异步执行，那么它的异步执行机制是怎么样的？</p>
+</blockquote>
+<p>通过事件循环（Event Loop），理解了事件循环的原理就理解了js的异步执行机制，本文主要介绍。</p>
+<blockquote>
+<p>js是单线程的，那么是否代表参与js执行过程的线程就只有一个？</p>
+</blockquote>
+<p>不是的，会有四个线程参与该过程，但是永远只有JS引擎线程在执行JS脚本程序，其他的三个线程只协助，不参与代码解析与执行。参与js执行过程的线程分别是：</p>
+<ul>
+<li><p><strong>JS引擎线程</strong>： 也称为JS内核，负责解析执行Javascript脚本程序的主线程（例如V8引擎）</p>
+</li>
+<li><p><strong>事件触发线程</strong>： 归属于浏览器内核进程，不受JS引擎线程控制。主要用于控制事件（例如鼠标，键盘等事件），当该事件被触发时候，事件触发线程就会把该事件的处理函数推进<strong>事件队列</strong>，等待JS引擎线程执行</p>
+</li>
+</ul>
+<ul>
+<li><p><strong>定时器触发线程</strong>：主要控制计时器setInterval和延时器setTimeout，用于定时器的计时，计时完毕，满足定时器的触发条件，则将定时器的处理函数推进事件队列中，等待JS引擎线程执行。<br>注：W3C在HTML标准中规定setTimeout低于4ms的时间间隔算为4ms。</p>
+</li>
+<li><p><strong>HTTP异步请求线程</strong>：通过XMLHttpRequest连接后，通过浏览器新开的一个线程，监控readyState状态变更时，如果设置了该状态的回调函数，则将该状态的处理函数推进事件队列中，等待JS引擎线程执行。<br>注：浏览器对通一域名请求的并发连接数是有限制的，Chrome和Firefox限制数为6个，ie8则为10个。</p>
+</li>
+</ul>
+<p>总结：永远只有JS引擎线程在执行JS脚本程序，其他三个线程只负责将满足触发条件的处理函数推进事件队列，等待JS引擎线程执行。</p>
+<h2 id="执行阶段"><a href="/2018/03/26/js引擎的执行过程（二）/#执行阶段" class="headerlink" title="执行阶段"></a>执行阶段</h2><p>我们先分析一个典型的例子（来自<a href="https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/" target="_blank" rel="noopener">Tasks, microtasks, queues and schedules</a>，建议英文基础好的阅读，非常不错的文章）：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">console.log(&apos;script start&apos;);</span><br><span class="line"></span><br><span class="line">setTimeout(function() &#123;</span><br><span class="line">  console.log(&apos;setTimeout&apos;);</span><br><span class="line">&#125;, 0);</span><br><span class="line"></span><br><span class="line">Promise.resolve().then(function() &#123;</span><br><span class="line">  console.log(&apos;promise1&apos;);</span><br><span class="line">&#125;).then(function() &#123;</span><br><span class="line">  console.log(&apos;promise2&apos;);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">console.log(&apos;script end&apos;);</span><br></pre></td></tr></table></figure></p>
+<p>这里我直接划分例子的代码结构，简单描述分析执行过程，暂不解释该过程中的概念和原理，概念和原理将会在下面具体讲解如下：</p>
+<ol>
+<li><p>宏任务（macro-task），宏任务又按执行顺序分为同步任务和异步任务</p>
+<ul>
+<li><p>同步任务</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">console.log(&apos;script start&apos;);</span><br><span class="line"></span><br><span class="line">console.log(&apos;script end&apos;);</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>异步任务</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">setTimeout(function() &#123;</span><br><span class="line">  console.log(&apos;setTimeout&apos;);</span><br><span class="line">&#125;, 0);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+<li><p>微任务（micro-task）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">Promise.resolve().then(function() &#123;</span><br><span class="line">  console.log(&apos;promise1&apos;);</span><br><span class="line">&#125;).then(function() &#123;</span><br><span class="line">  console.log(&apos;promise2&apos;);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>在JS引擎执行过程中，进入执行阶段后，代码的执行顺序如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">宏任务(同步任务) --&gt; 微任务 --&gt; 宏任务(异步任务)</span><br></pre></td></tr></table></figure></p>
+<p>输出结果为：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">script start</span><br><span class="line">script end</span><br><span class="line">promise1</span><br><span class="line">promise2</span><br><span class="line">setTimeout</span><br></pre></td></tr></table></figure></p>
+<p>进入ES6或Node环境中，JS的任务分为两种，分别是<strong>宏任务（macro-task）</strong>和<strong>微任务（micro-task）</strong>，在最新的ECMAScript中，微任务称为jobs，宏任务称为task，他们的执行顺序如上。可能很多人对上面的分析并不理解，那么我们接下来继续对上面例子进行详细分析。</p>
+<h3 id="宏任务"><a href="/2018/03/26/js引擎的执行过程（二）/#宏任务" class="headerlink" title="宏任务"></a>宏任务</h3><p>宏任务（macro-task）可分为<strong>同步任务</strong>和<strong>异步任务</strong>：</p>
+<ul>
+<li><p>同步任务指的是在JS引擎主线程上按顺序执行的任务，只有前一个任务执行完毕后，才能执行后一个任务，形成一个执行栈（函数调用栈）。</p>
+</li>
+<li><p>异步任务指的是不直接进入JS引擎主线程，而是满足触发条件时，相关的线程将该异步任务推进<strong>任务队列(task queue)</strong>，等待JS引擎主线程上的任务执行完毕，空闲时读取执行的任务，例如异步Ajax，DOM事件，setTimeout等。</p>
+</li>
+</ul>
+<p>理解宏任务中同步任务和异步任务的执行顺序，那么就相当于理解了JS异步执行机制–<strong>事件循环（Event Loop）</strong>。</p>
+<h4 id="事件循环"><a href="/2018/03/26/js引擎的执行过程（二）/#事件循环" class="headerlink" title="事件循环"></a>事件循环</h4><p>事件循环可以理解成由三部分组成，分别是：</p>
+<ul>
+<li><p><strong>主线程执行栈</strong></p>
+</li>
+<li><p><strong>异步任务等待触发</strong></p>
+</li>
+<li><p><strong>任务队列</strong></p>
+</li>
+</ul>
+<p><strong>任务队列(task queue)就是以队列的数据结构对事件任务进行管理，特点是先进先出，后进后出</strong>。<br><br><br>这里直接引用一张著名的图片(参考自Philip Roberts的演讲《Help, I’m stuck in an event-loop》)，帮助我们理解，如下：<br><img src="/2018/03/26/js引擎的执行过程（二）/img/Event Loop.jpg" alt="Event Loop"></p>
+<p>在JS引擎主线程执行过程中：</p>
+<ul>
+<li><p>首先执行宏任务的同步任务，在主线程上形成一个<strong>执行栈</strong>，可理解为函数调用栈；</p>
+</li>
+<li><p>当执行栈中的函数调用到一些异步执行的API（例如异步Ajax，DOM事件，setTimeout等API），则会开启对应的线程（Http异步请求线程，事件触发线程和定时器触发线程）进行监控和控制</p>
+</li>
+<li><p>当异步任务的事件满足触发条件时，对应的线程则会把该事件的处理函数推进<strong>任务队列(task queue)</strong>中，等待主线程读取执行</p>
+</li>
+<li><p>当JS引擎主线程上的任务执行完毕，则会读取任务队列中的事件，将任务队列中的事件任务推进主线程中，按任务队列顺序执行</p>
+</li>
+<li><p>当JS引擎主线程上的任务执行完毕后，则会再次读取任务队列中的事件任务，如此循环，这就是事件循环（Event Loop）的过程</p>
+</li>
+</ul>
+<p>如果还是不能理解，那么我们再次拿上面的例子进行详细分析，该例子中宏任务的代码部分是：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">console.log(&apos;script start&apos;);</span><br><span class="line"></span><br><span class="line">setTimeout(function() &#123;</span><br><span class="line">  console.log(&apos;setTimeout&apos;);</span><br><span class="line">&#125;, 0);</span><br><span class="line"></span><br><span class="line">console.log(&apos;script end&apos;);</span><br></pre></td></tr></table></figure></p>
+<p>代码执行过程如下：</p>
+<ol>
+<li><p>JS引擎主线程按代码顺序执行，当执行到<code>console.log(&#39;script start&#39;);</code>，JS引擎主线程认为该任务是<strong>同步任务</strong>，所以立刻执行输出script start，然后继续向下执行；</p>
+</li>
+<li><p>JS引擎主线程执行到<code>setTimeout(function() {
+console.log(&#39;setTimeout&#39;);
+}, 0);</code>，JS引擎主线程认为setTimeout是<strong>异步任务</strong>API，则向浏览器内核进程申请开启定时器线程进行计时和控制该setTimeout任务。由于W3C在HTML标准中规定setTimeout低于4ms的时间间隔算为4ms，那么当计时到4ms时，定时器线程就把该回调处理函数推进任务队列中等待主线程执行，然后JS引擎主线程继续向下执行</p>
+</li>
+<li><p>JS引擎主线程执行到<code>console.log(&#39;script end&#39;);</code>，JS引擎主线程认为该任务是<strong>同步任务</strong>，所以立刻执行输出script end</p>
+</li>
+<li><p>JS引擎主线程上的任务执行完毕（输出script start和script end）后，主线程空闲，则开始读取任务队列中的事件任务，将该任务队里的事件任务推进主线程中，按任务队列顺序执行，最终输出setTimeout，所以输出的结果顺序为<code>script start    script end    setTimeout</code></p>
+</li>
+</ol>
+<p>以上便是JS引擎执行宏任务的整个过程。</p>
+<p>理解该过程后，我们做一些拓展性的思考：</p>
+<blockquote>
+<p>我们都知道setTimeout和setInterval是异步任务的定时器，需要添加到任务队列等待主线程执行，那么使用setTimeout模拟实现setInterval，会有区别吗？</p>
+</blockquote>
+<p>答案是有区别的，我们不妨思考一下：</p>
+<ul>
+<li><p>setTimeout实现setInterval只能通过递归调用</p>
+</li>
+<li><p>setTimeout是在到了指定时间的时候就把事件推到任务队列中，只有当在任务队列中的setTimeout事件被主线程执行后，才会继续再次在到了指定时间的时候把事件推到任务队列，那么setTimeout的事件执行肯定比指定的时间要久，具体相差多少跟代码执行时间有关</p>
+</li>
+<li><p>setInterval则是每次都精确的隔一段时间就向任务队列推入一个事件，无论上一个setInterval事件是否已经执行，所以有可能存在setInterval的事件任务累积，导致setInterval的代码重复连续执行多次，影响页面性能。</p>
+</li>
+</ul>
+<p>综合以上的分析，使用setTimeout实现计时功能是比setInterval性能更好的。当然如果不需要兼容低版本的IE浏览器，使用<strong>requestAnimationFrame</strong>是更好的选择。</p>
+<p>我们继续再做进一步的思考，如下：</p>
+<blockquote>
+<p>高频率触发的事件（例如滚动事件）触发频率过高会影响页面性能，甚至造成页面卡顿，我们是否可以利用计时器的原理进行优化呢？</p>
+</blockquote>
+<p>是可以的，我们可以利用setTimeout实现计时器的原理，对高频触发的事件进行优化，实现点在于将多个触发事件合并成一个，这就是<strong>防抖</strong>和<strong>节流</strong>，本文先不做具体讲解，大家可以自行研究，有机会我再另开文章分析。</p>
+<h3 id="微任务"><a href="/2018/03/26/js引擎的执行过程（二）/#微任务" class="headerlink" title="微任务"></a>微任务</h3><p>微任务是在es6和node环境中出现的一个任务类型，如果不考虑es6和node环境的话，我们只需要理解宏任务事件循环的执行过程就已经足够了，但是到了es6和node环境，我们就需要理解微任务的执行顺序了。<br><strong>微任务（micro-task）的API主要有:Promise， process.nextTick</strong></p>
+<p>这里我们直接引用一张流程图帮助我们理解，如下：<br><img src="/2018/03/26/js引擎的执行过程（二）/img/task.jpg" alt="task"></p>
+<p>在宏任务中执行的任务有两种，分别是<strong>同步任务</strong>和<strong>异步任务</strong>，因为异步任务会在满足触发条件时才会推进任务队列（task queue），然后等待主线程上的任务执行完毕，再读取任务队列中的任务事件，最后推进主线程执行，所以这里将异步任务即任务队列看作是新的宏任务。执行的过程如上图所示：</p>
+<ol>
+<li><p>执行宏任务中<strong>同步任务</strong>，执行结束；</p>
+</li>
+<li><p>检查是否存在可执行的<strong>微任务</strong>，有的话执行所有微任务，然后读取任务队列的任务事件，推进主线程形成新的宏任务；没有的话则读取任务队列的任务事件，推进主线程形成新的宏任务</p>
+</li>
+<li><p>执行<strong>新宏任务</strong>的事件任务，再检查是否存在可执行的微任务，如此不断的重复循环</p>
+</li>
+</ol>
+<p>这就是加入微任务后的详细事件循环，如果还没有理解，那么们对一开始的例子做一个全面的分析，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">console.log(&apos;script start&apos;);</span><br><span class="line"></span><br><span class="line">setTimeout(function() &#123;</span><br><span class="line">  console.log(&apos;setTimeout&apos;);</span><br><span class="line">&#125;, 0);</span><br><span class="line"></span><br><span class="line">Promise.resolve().then(function() &#123;</span><br><span class="line">  console.log(&apos;promise1&apos;);</span><br><span class="line">&#125;).then(function() &#123;</span><br><span class="line">  console.log(&apos;promise2&apos;);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">console.log(&apos;script end&apos;);</span><br></pre></td></tr></table></figure></p>
+<p>执行过程如下：</p>
+<ol>
+<li><p>代码块通过语法分析和预编译后，进入执行阶段，当JS引擎主线程执行到<code>console.log(&#39;script start&#39;);</code>，JS引擎主线程认为该任务是<strong>同步任务</strong>，所以立刻执行输出<code>script start</code>，然后继续向下执行；</p>
+</li>
+<li><p>JS引擎主线程执行到<code>setTimeout(function() {
+console.log(&#39;setTimeout&#39;);
+}, 0);</code>，JS引擎主线程认为setTimeout是<strong>异步任务</strong>API，则向浏览器内核进程申请开启定时器线程进行计时和控制该setTimeout任务。由于W3C在HTML标准中规定setTimeout低于4ms的时间间隔算为4ms，那么当计时到4ms时，定时器线程就把该回调处理函数推进任务队列中等待主线程执行，然后JS引擎主线程继续向下执行</p>
+</li>
+<li><p>JS引擎主线程执行到<code>Promise.resolve().then(function() {
+console.log(&#39;promise1&#39;);
+}).then(function() {
+console.log(&#39;promise2&#39;);
+});</code>，JS引擎主线程认为Promise是一个<strong>微任务</strong>，这把该任务划分为微任务，等待执行</p>
+</li>
+<li><p>JS引擎主线程执行到<code>console.log(&#39;script end&#39;);</code>，JS引擎主线程认为该任务是<strong>同步任务</strong>，所以立刻执行输出<code>script end</code></p>
+</li>
+<li><p>主线程上的宏任务执行完毕，则开始检测是否存在可执行的微任务，检测到一个<strong>Promise微任务</strong>，那么立刻执行，输出<code>promise1</code>和<code>promise2</code></p>
+</li>
+<li><p>微任务执行完毕，主线程开始读取任务队列中的事件任务setTimeout，推入主线程形成<strong>新宏任务</strong>，然后在主线程中执行，输出<code>setTimeout</code></p>
+</li>
+</ol>
+<p>最后的输出结果即为：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">script start</span><br><span class="line">script end</span><br><span class="line">promise1</span><br><span class="line">promise2</span><br><span class="line">setTimeout</span><br></pre></td></tr></table></figure></p>
+<h2 id="总结"><a href="/2018/03/26/js引擎的执行过程（二）/#总结" class="headerlink" title="总结"></a>总结</h2><p>以上便是JS引擎执行的全部过程，JS引擎的执行过程其实并不复杂，只要多思考多研究就可以理解，理解该过程后可以在一定程度上提高对JS的认识。</p>
+<h2 id="参考文献"><a href="/2018/03/26/js引擎的执行过程（二）/#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ul>
+<li><a href="https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/" target="_blank" rel="noopener">Tasks, microtasks, queues and schedules</a></li>
+</ul>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> javascript </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[js引擎的执行过程（一）]]></title>
+      <url>/2018/03/19/js%E5%BC%95%E6%93%8E%E7%9A%84%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89/</url>
+      <content type="html"><![CDATA[<h2 id="概述"><a href="/2018/03/19/js引擎的执行过程（一）/#概述" class="headerlink" title="概述"></a>概述</h2><p>js是一种非常灵活的语言，理解js引擎的执行过程对我们学习javascript非常重要，但是网上讲解js引擎的文章也大多是浅尝辄止或者只局部分析，例如只分析事件循环（Event Loop）或者变量提升等等，并没有全面深入的分析其中过程。所以我一直想把js执行的详细过程整理成一个较为详细的知识体系，帮助我们理解和整体认识js。</p>
+<p>在分析之前我们先了解以下基础概念：</p>
+<ul>
+<li><p>javascript是<strong>单线程语言</strong></p>
+<blockquote>
+<p>在浏览器中一个页面永远只有一个线程在执行js脚本代码（在不主动开启新线程的情况下）。</p>
+</blockquote>
+</li>
+<li><p>javascript是单线程语言,但是代码解析却十分的快速，不会发生解析阻塞。</p>
+<blockquote>
+<p>javascript是异步执行的，通过<strong>事件循环（Event Loop）</strong>的方式实现。</p>
+</blockquote>
+</li>
+</ul>
+<p>下面我们先通过一段较为简单的代码（暂不存在事件循环（Event Loop））来检验我们对js引擎执行过程的理解是否正确，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">&lt;script&gt;</span><br><span class="line">    console.log(fun)</span><br><span class="line"></span><br><span class="line">    console.log(person)</span><br><span class="line">&lt;/script&gt;</span><br><span class="line"></span><br><span class="line">&lt;script&gt;</span><br><span class="line">    console.log(person)</span><br><span class="line"></span><br><span class="line">    console.log(fun)</span><br><span class="line"></span><br><span class="line">    var person = &quot;Eric&quot;;</span><br><span class="line"></span><br><span class="line">    console.log(person)</span><br><span class="line"></span><br><span class="line">    function fun() &#123;</span><br><span class="line">        console.log(person)</span><br><span class="line">        var person = &quot;Tom&quot;;</span><br><span class="line">        console.log(person)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    fun()</span><br><span class="line"></span><br><span class="line">    console.log(person)</span><br><span class="line">&lt;/script&gt;</span><br></pre></td></tr></table></figure></p>
+<p>我们可以先分析上面的代码，按自己的理解分析输出的顺序是什么，然后在浏览器执行一次，结果一样的话，那么代表你已经对js引擎执行过程有了正确的理解；如果不是，则代表还存在模糊或者概念不清晰等问题。结果我们不在这里进行讨论，我们利用上面简单的例子全面分析js引擎执行过程，相信在理解该过程后我们就不难得出结果的，js引擎执行过程分为三个阶段：</p>
+<ol>
+<li><p><strong>语法分析</strong></p>
+</li>
+<li><p><strong>预编译阶段</strong></p>
+</li>
+<li><p><strong>执行阶段</strong></p>
+</li>
+</ol>
+<p>注：浏览器首先按顺序加载由<code>&lt;script&gt;</code>标签分割的js代码块，加载js代码块完毕后，立刻进入以上三个阶段，然后再按顺序查找下一个代码块，再继续执行以上三个阶段，无论是<strong>外部脚本文件</strong>（不异步加载）还是<strong>内部脚本代码块</strong>，都是一样的原理，并且都在同一个全局作用域中。</p>
+<h2 id="语法分析"><a href="/2018/03/19/js引擎的执行过程（一）/#语法分析" class="headerlink" title="语法分析"></a>语法分析</h2><p>js脚本代码块加载完毕后，会首先进入语法分析阶段。该阶段主要作用是：</p>
+<blockquote>
+<p>分析该js脚本代码块的语法是否正确，如果出现不正确，则向外抛出一个<strong>语法错误（SyntaxError）</strong>，停止该js代码块的执行，然后继续查找并加载下一个代码块；如果语法正确，则进入预编译阶段</p>
+</blockquote>
+<p>语法错误报错如下图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/syntax.jpg" alt="syntax"></p>
+<h2 id="预编译阶段"><a href="/2018/03/19/js引擎的执行过程（一）/#预编译阶段" class="headerlink" title="预编译阶段"></a>预编译阶段</h2><p>js代码块通过语法分析阶段后，语法正确则进入预编译阶段。在分析预编译阶段之前，我们先了解一下js的<strong>运行环境</strong>，运行环境主要有三种：</p>
+<ul>
+<li><p><strong>全局环境</strong>（JS代码加载完毕后，进入代码预编译即进入全局环境）</p>
+</li>
+<li><p><strong>函数环境</strong>（函数调用执行时，进入该函数环境，不同的函数则函数环境不同） </p>
+</li>
+<li><p><strong>eval</strong>（不建议使用，会有安全，性能等问题）</p>
+</li>
+</ul>
+<p>每进入一个不同的运行环境都会创建一个相应的<strong>执行上下文（Execution Context）</strong>，那么在一段JS程序中一般都会创建多个执行上下文，js引擎会以栈的方式对这些执行上下文进行处理，形成<strong>函数调用栈（call stack）</strong>，栈底永远是全局执行上下文（Global Execution Context），栈顶则永远是当前执行上下文。</p>
+<h3 id="函数调用栈"><a href="/2018/03/19/js引擎的执行过程（一）/#函数调用栈" class="headerlink" title="函数调用栈"></a>函数调用栈</h3><blockquote>
+<p>函数调用栈就是使用栈存取的方式进行管理运行环境，特点是<strong>先进后出，后进先出</strong>。</p>
+</blockquote>
+<p>我们分析下段简单的JS脚本代码来理解函数调用栈：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">function bar() &#123;</span><br><span class="line">    var B_context = &quot;Bar EC&quot;;</span><br><span class="line"></span><br><span class="line">    function foo() &#123;</span><br><span class="line">        var f_context = &quot;foo EC&quot;;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    foo()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">bar()</span><br></pre></td></tr></table></figure>
+<p>上面的代码块通过语法分析后，进入预编译阶段，如下图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/stack.png" alt="stack"></p>
+<ol>
+<li><p>首先进入全局环境，创建全局执行上下文（Global Execution Context），推入stack栈中</p>
+</li>
+<li><p>调用bar函数，进入bar函数运行环境，创建bar函数执行上下文（bar Execution Context），推入stack栈中</p>
+</li>
+<li><p>在bar函数内部调用foo函数，则再进入foo函数运行环境，创建foo函数执行上下文（foo Execution Context），推入stack栈中</p>
+</li>
+<li><p>此刻栈底是全局执行上下文（Global Execution Context），栈顶是foo函数执行上下文（foo Execution Context），如上图，由于foo函数内部没有再调用其他函数，那么则开始出栈</p>
+</li>
+<li><p>foo函数执行完毕后，栈顶foo函数执行上下文（foo Execution Context）首先出栈</p>
+</li>
+<li><p>bar函数执行完毕，bar函数执行上下文（bar Execution Context）出栈</p>
+</li>
+<li><p>Global Execution Context则在浏览器或者该标签页关闭时出栈。</p>
+</li>
+</ol>
+<p>注：不同的运行环境执行都会进入代码预编译和执行两个阶段，语法分析则在代码块加载完毕时统一检验语法</p>
+<h3 id="创建执行上下文"><a href="/2018/03/19/js引擎的执行过程（一）/#创建执行上下文" class="headerlink" title="创建执行上下文"></a>创建执行上下文</h3><p>执行上下文可理解为当前的执行环境，与该运行环境相对应。创建执行上下文的过程中，主要做了以下三件事件，如图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/ec.jpg" alt="EC"></p>
+<ol>
+<li><p><strong>创建变量对象（Variable Object）</strong></p>
+</li>
+<li><p><strong>建立作用域链（Scope Chain）</strong></p>
+</li>
+<li><p><strong>确定this的指向</strong></p>
+</li>
+</ol>
+<h4 id="创建变量对象"><a href="/2018/03/19/js引擎的执行过程（一）/#创建变量对象" class="headerlink" title="创建变量对象"></a>创建变量对象</h4><p>创建变量对象主要经过以下几个过程，如图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/VO.jpg" alt="VO"></p>
+<ol>
+<li><p>创建<strong>arguments对象</strong>，检查当前上下文中的参数，建立该对象的属性与属性值，仅在函数环境(非箭头函数)中进行，全局环境没有此过程</p>
+</li>
+<li><p>检查当前上下文的<strong>函数声明</strong>，按代码顺序查找，将找到的函数提前声明，如果当前上下文的变量对象没有该函数名属性，则在该变量对象以函数名建立一个属性，属性值则为指向该函数所在堆内存地址的引用，如果存在，则会被新的引用覆盖。</p>
+</li>
+<li><p>检查当前上下文的<strong>变量声明</strong>，按代码顺序查找，将找到的变量提前声明，如果当前上下文的变量对象没有该变量名属性，则在该变量对象以变量名建立一个属性，属性值为<strong>undefined</strong>；如果存在，则忽略该变量声明</p>
+</li>
+</ol>
+<p>注：在全局环境中，window对象就是全局执行上下文的变量对象，所有的变量和函数都是window对象的属性方法。</p>
+<p>所以函数声明提前和变量声明提升是在创建变量对象中进行的，且函数声明优先级高于变量声明。</p>
+<p>我们分析一段简单的代码，帮助我们理解该过程，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">function fun(a, b) &#123;</span><br><span class="line">    var num = 1;</span><br><span class="line"></span><br><span class="line">    function test() &#123;</span><br><span class="line"></span><br><span class="line">        console.log(num)</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">fun(2, 3)</span><br></pre></td></tr></table></figure></p>
+<p>这里我们在全局环境调用fun函数，创建fun执行上下文，这里为了方便大家理解，暂时不讲解作用域链以及this指向，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">funEC = &#123;</span><br><span class="line">    //变量对象</span><br><span class="line">    VO: &#123;</span><br><span class="line">        //arguments对象</span><br><span class="line">        arguments: &#123;</span><br><span class="line">            a: undefined,</span><br><span class="line">            b: undefined,</span><br><span class="line">            length: 2</span><br><span class="line">        &#125;,</span><br><span class="line"></span><br><span class="line">        //test函数</span><br><span class="line">        test: &lt;test reference&gt;, </span><br><span class="line"></span><br><span class="line">        //num变量</span><br><span class="line">        num: undefined</span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    //作用域链</span><br><span class="line">    scopeChain:[],</span><br><span class="line"></span><br><span class="line">    //this指向</span><br><span class="line">    this: window</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>funEC表示fun函数的执行上下文（fun Execution Context简写为funEC）</p>
+</li>
+<li><p>funE的变量对象中arguments属性，上面的写法仅为了方便大家理解，但是在浏览器中展示是以类数组的方式展示的</p>
+</li>
+<li><p><code>&lt;test reference&gt;</code>表示test函数在堆内存地址的引用</p>
+</li>
+</ul>
+<p>注：创建变量对象发生在预编译阶段，但尚未进入执行阶段，该变量对象都是不能访问的，因为此时的变量对象中的变量属性尚未赋值，值仍为undefined，只有进入执行阶段，变量对象中的变量属性进行赋值后，变量对象（Variable Object）转为活动对象（Active Object）后，才能进行访问，这个过程就是<strong>VO –&gt; AO</strong>过程。</p>
+<h4 id="建立作用域链"><a href="/2018/03/19/js引擎的执行过程（一）/#建立作用域链" class="headerlink" title="建立作用域链"></a>建立作用域链</h4><p><strong>作用域链由当前执行环境的变量对象（未进入执行阶段前）与上层环境的一系列活动对象组成，它保证了当前执行环境对符合访问权限的变量和函数的有序访问。</strong></p>
+<p>理清作用域链可以帮助我们理解js很多问题包括闭包问题等，下面我们结合一个简单的例子来理解作用域链，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">var num = 30;</span><br><span class="line"></span><br><span class="line">function test() &#123;</span><br><span class="line">    var a = 10;</span><br><span class="line"></span><br><span class="line">    function innerTest() &#123;</span><br><span class="line">        var b = 20;</span><br><span class="line"></span><br><span class="line">        return a + b</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    innerTest()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">test()</span><br></pre></td></tr></table></figure></p>
+<p>在上面的例子中，当执行到调用innerTest函数，进入innerTest函数环境。全局执行上下文和test函数执行上下文已进入执行阶段，innerTest函数执行上下文在预编译阶段创建变量对象，所以他们的活动对象和变量对象分别是AO(global)，AO(test)和VO(innerTest)，而innerTest的作用域链由当前执行环境的变量对象（未进入执行阶段前）与上层环境的一系列活动对象组成，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">innerTestEC = &#123;</span><br><span class="line"></span><br><span class="line">    //变量对象</span><br><span class="line">    VO: &#123;b: undefined&#125;, </span><br><span class="line"></span><br><span class="line">    //作用域链</span><br><span class="line">    scopeChain: [VO(innerTest), AO(test), AO(global)],  </span><br><span class="line">    </span><br><span class="line">    //this指向</span><br><span class="line">    this: window</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们这里直接使用数组表示作用域链，作用域链的活动对象或变量对象可以直接理解为作用域。</p>
+<ul>
+<li><p>作用域链的第一项永远是当前作用域（当前上下文的变量对象或活动对象）；</p>
+</li>
+<li><p>最后一项永远是全局作用域（全局执行上下文的活动对象）；</p>
+</li>
+<li><p>作用域链保证了变量和函数的有序访问，查找方式是沿着作用域链从左至右查找变量或函数，找到则会停止查找，找不到则一直查找到全局作用域，再找不到则会抛出引用错误。</p>
+</li>
+</ul>
+<blockquote>
+<p>在这里我们顺便思考一下，什么是<strong>闭包</strong>？</p>
+</blockquote>
+<p>我们先看下面一个简单例子，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">function foo() &#123;</span><br><span class="line">    var num = 20;</span><br><span class="line"></span><br><span class="line">    function bar() &#123;</span><br><span class="line">        var result = num + 20;</span><br><span class="line"></span><br><span class="line">        return result</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    bar()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">foo()</span><br></pre></td></tr></table></figure>
+<p>因为对于闭包有很多不同的理解，包括我看的一些书籍(例如js高级程序设计)，我这里直接以浏览器解析，以浏览器理解的闭包为准来分析闭包，如下图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/close.jpg" alt="闭包"></p>
+<p>如上图所示，chrome浏览器理解闭包是foo，那么按浏览器的标准是如何定义闭包的，我总结为三点：</p>
+<ol>
+<li><p><strong>在函数内部定义新函数</strong></p>
+</li>
+<li><p><strong>新函数访问外层函数的局部变量，即访问外层函数环境的活动对象属性</strong></p>
+</li>
+<li><p><strong>新函数执行，创建新的函数执行上下文，外层函数即为闭包</strong></p>
+</li>
+</ol>
+<hr>
+<h4 id="确定this指向"><a href="/2018/03/19/js引擎的执行过程（一）/#确定this指向" class="headerlink" title="确定this指向"></a>确定this指向</h4><p>在全局环境下，全局执行上下文中变量对象的this属性指向为window；函数环境下的this指向却较为灵活，需根据执行环境和执行方法确定，需要举大量的典型例子概括，本文先不做分析。</p>
+<h2 id="总结"><a href="/2018/03/19/js引擎的执行过程（一）/#总结" class="headerlink" title="总结"></a>总结</h2><p>由于涉及的内容过多，这里将第三个阶段（<strong>执行阶段</strong>）单独分离出来。另开新文章进行详细分析，下篇文章主要介绍js执行阶段中的同步任务执行和异步任务执行机制（<strong>事件循环（Event Loop）</strong>）。本文如果错误，敬请指正。</p>
+<h2 id="参考书籍"><a href="/2018/03/19/js引擎的执行过程（一）/#参考书籍" class="headerlink" title="参考书籍"></a>参考书籍</h2><ul>
+<li><strong>你不知道的javascript(上卷)</strong></li>
+</ul>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> javascript </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[浏览器渲染过程]]></title>
+      <url>/2018/03/13/%E6%B5%8F%E8%A7%88%E5%99%A8%E6%B8%B2%E6%9F%93%E8%BF%87%E7%A8%8B/</url>
+      <content type="html"><![CDATA[<h2 id="概述"><a href="/2018/03/13/浏览器渲染过程/#概述" class="headerlink" title="概述"></a>概述</h2><p>在分析浏览渲染过程之前，我们先了解进程和线程：</p>
+<ul>
+<li><p>什么是进程？</p>
+<blockquote>
+<p>进程是CPU进行资源分配的基本单位</p>
+</blockquote>
+</li>
+<li><p>什么是线程？</p>
+<blockquote>
+<p>线程是CPU调度的最小单位，是建立在进程的基础上的运行单位，共享进程的内存空间</p>
+</blockquote>
+</li>
+</ul>
+<p>那么我们可以得出结论：进程会占用系统资源，在一个进程内可以存在一个或多个线程，这就是单线程和多线程，但是无论是单线程还是多线程，都是在一个进程内。</p>
+<h2 id="多进程"><a href="/2018/03/13/浏览器渲染过程/#多进程" class="headerlink" title="多进程"></a>多进程</h2><p><img src="/2018/03/13/浏览器渲染过程/img/optimize.png" alt="浏览器进程"><br>由上图我们可以知道：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- 浏览器是多进程的</span><br><span class="line"></span><br><span class="line">- 不同类型的标签页都会开启一个新进程</span><br><span class="line"></span><br><span class="line">- 相同类型的标签页会合并成一个进程</span><br></pre></td></tr></table></figure>
+<p>上图中浏览器各个进程的主要作用如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">- 浏览器进程 </span><br><span class="line">  1. 负责管理各个标签页的创建与销毁</span><br><span class="line">  2. 负责浏览器的界面显示和功能（前进，后退，收藏等）</span><br><span class="line">  3. 负责资源的管理与下载</span><br><span class="line"></span><br><span class="line">- 第三方插件进程 </span><br><span class="line">  1. 负责每个第三方插件的使用，每个第三方插件使用时候都会创建一个对应的进程</span><br><span class="line"></span><br><span class="line">- GPU进程 </span><br><span class="line">  1. 负责3D绘制和硬件加速</span><br><span class="line"></span><br><span class="line">- 浏览器渲染进程 (本文主要分析)</span><br><span class="line">  1. 浏览器内核，主要负责HTML，CSS，JS等文件的解析和执行</span><br></pre></td></tr></table></figure></p>
+<h2 id="浏览器内核"><a href="/2018/03/13/浏览器渲染过程/#浏览器内核" class="headerlink" title="浏览器内核"></a>浏览器内核</h2><p>浏览器内核就是浏览器渲染进程，从接收下载文件后再到呈现整个页面的过程，由浏览器渲染进程负责，主要的流程如下：</p>
+<blockquote>
+<ol>
+<li><p>解析HTML文件和CSS文件，加载图片等资源文件，渲染成用户看到的页面</p>
+</li>
+<li><p>执行解析js文件脚本代码</p>
+</li>
+</ol>
+</blockquote>
+<p>(本文主要讲解浏览器页面渲染过程，js脚本解析执行过程，我将会另开文章分析，所以本文有关js解析的内容都会省略)</p>
+<p>在该过程中浏览器渲染进程会开启多个线程协作完成，主要的线程以及作用如下:</p>
+<ol>
+<li><p>GUI渲染线程</p>
+<ul>
+<li><p>负责解析HTML文件构建DOM树，解析CSS结合DOM树渲染成RenderObject树，然后布局和绘制页面</p>
+</li>
+<li><p>当RenderObject树需要更新样式属性时，即发生重绘（Repaint）或RenderObject树中的元素规模尺寸，布局或显示隐藏等发生改变，即发生回流（reflow）时执行</p>
+</li>
+</ul>
+</li>
+<li><p>JS引擎线程</p>
+</li>
+<li><p>事件触发线程,</p>
+</li>
+<li><p>定时器触发器线程</p>
+</li>
+<li><p>异步http请求线程</p>
+</li>
+</ol>
+<blockquote>
+<p>注：GUI渲染线程与JS引擎线程是互斥的，因为JS引擎线程在执行过程中可能会发生重绘和回流，所以GUI渲染线程执行时候，JS引擎线程会被挂起，等待GUI渲染线程执行完毕才会执行；JS引擎线程执行时候同理</p>
+</blockquote>
+<h3 id="GUI渲染线程"><a href="/2018/03/13/浏览器渲染过程/#GUI渲染线程" class="headerlink" title="GUI渲染线程"></a>GUI渲染线程</h3><p>接下来我们主要分析GUI渲染线程执行的详细过程：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">1. 解析HTML文件，构建DOM树，同时浏览器主进程负责下载CSS文件</span><br><span class="line"></span><br><span class="line">2. CSS文件下载完成，解析CSS文件成树形的数据结构，然后结合DOM树合并成RenderObject树</span><br><span class="line"></span><br><span class="line">3. 布局RenderObject树，负责RenderObject树中的元素尺寸，位置等计算</span><br><span class="line"></span><br><span class="line">4. 绘制RenderObject树，绘制页面的像素信息</span><br><span class="line"></span><br><span class="line">5. 浏览器主进程将默认图层和复合图层交给GPU进程，GPU进程再将各个图层合成（composite），最后显示出页面</span><br></pre></td></tr></table></figure></p>
+<p>注：</p>
+<ul>
+<li><p>默认图层指的就是处于普通文档流的元素；</p>
+</li>
+<li><p>复合图层一般指使用动画执行或者<code>&lt;video&gt;&lt;iframe&gt;&lt;canvas&gt;&lt;webgl&gt;</code>等元素，也可以使用z-index将层级高的元素变成复合图层，使用复合图层可以进行硬件加速，其原理就是避免了默认图层的重绘和回流，想了解的童鞋可以自行深入研究。</p>
+</li>
+</ul>
+<p>了解GUI渲染线程的执行过程后，我们可以根据其渲染原理进行渲染优化：</p>
+<ul>
+<li><p>尽可能提前引入css文件，例如在头部引入css文件;</p>
+</li>
+<li><p>尽可能早加载css文件中引用的资源，例如自定义字体文件，可以使用预加载，在link标签加入’rel=”preload” as=”font”‘该元素属性,不然会造成渲染阻塞</p>
+</li>
+<li><p>在DOM和CSS渲染之后加载js文件，例如在尾部加载js文件，或者使用该元素属性”defer”和”async”,进行js文件异步加载，但是在不同浏览器会有兼容性问题。</p>
+</li>
+</ul>
+<h2 id="总结"><a href="/2018/03/13/浏览器渲染过程/#总结" class="headerlink" title="总结"></a>总结</h2><p>本文主要介绍了浏览器渲染过程，但是并未分析js脚本文件的解析过程，我将在下文进行分析js脚本代码是如何解析的。</p>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> Browser </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Internet通信（二）]]></title>
+      <url>/2018/03/02/Internet%E9%80%9A%E4%BF%A1%EF%BC%88%E4%BA%8C%EF%BC%89/</url>
+      <content type="html"><![CDATA[<p>上文介绍了计算机网络的基础知识和DNS域名解析，本文继续分析DNS域名解析确定接收方的IP地址后如何确定MAC地址，然后建立TCP连接。</p>
+<p>我们先对上文做个小结:</p>
+<ul>
+<li><p>Internet通信的本质就是计算机A向计算机B发送一个数据包，后者接收再回应一个数据包，依靠传递数据包来完成Internet通信，所以确定计算机地址是Internet通信的前提。</p>
+</li>
+<li><p>在互联网中，计算机地址由IP地址和MAC地址确定，发出方的MAC地址是必然知道的，IP地址则可通过用户设置<strong>静态IP地址</strong>或者通过<strong>DHCP协议</strong>动态确定，接收方的IP地址可通过DNS解析确定，那么我们确定接受方的MAC地址，即可建立Internet通信。</p>
+</li>
+</ul>
+<h2 id="接收方MAC地址"><a href="/2018/03/02/Internet通信（二）/#接收方MAC地址" class="headerlink" title="接收方MAC地址"></a>接收方MAC地址</h2><p>确定接受方MAC地址的情况分两种：发出方和接收方是否在同一子网络中。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">如何判断发出方和接收方是否在同一子网络？</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li><p>判断两台计算机是否在同一网络，需要知道双方的IP地址以及发出方本机的<strong>子网掩码</strong>。</p>
+</li>
+<li><p>将子网掩码和双方的IP地址转为二进制的IP地址，然后将二进制的子网掩码分别与二进制的IP地址做AND运算（两个数位都为1，运算结果为1，否则为0），然后比较结果，相同则表示在同一子网络中，否则就不在。</p>
+</li>
+</ul>
+<p>例如发出方的子网掩码为255.255.255.0，两台计算机IP地址分别为172.16.254.2和172.16.254.1，将子网掩码转为二进制为11111111.11111111.11111111.00000000，两台计算机IP地址转为二进制分别为10101100.00010000.11111110.00000010和10101100.00010000.11111110.00000001。两台计算机IP地分别与子网掩码做AND运算，运算结果转为十进制都是172.16.254.0，那么则表示172.16.254.2和172.16.254.1在同一子网络中。</p>
+<blockquote>
+<p>在同一子网络</p>
+</blockquote>
+<ul>
+<li><p>在同一子网络中的两台计算机，我们可使用<strong>ARP协议</strong>来确定对方的MAC地址。</p>
+</li>
+<li><p>根据<strong>ARP协议</strong>，发出方将在链接层发出一个ARP数据包（包含在以太网数据包中），该数据包包含本机的IP地址，MAC地址和所要查询的接收方主机IP地址，由于接收方IP地址尚未知道，则在接收方的MAC地址栏填写为FF:FF:FF:FF:FF:FF，表示为一个广播地址。</p>
+</li>
+<li><p>那么发出方所在子网络的每台计算机都会接收到这个数据包，然后从该数据包取出查询的IP地址，与自身的IP地址进行比较，如果相同，则做出响应，返回自身的MAC地址，并将发出方的IP地址和MAC地址映射添加到<strong>本地ARP缓存</strong>中，如果不同，则会丢弃该数据包。</p>
+</li>
+<li><p>发出方接收到接收方的响应后，会将接收方的IP地址和MAC地址映射添加到<strong>本地ARP缓存</strong>中，然后开始建立TCP连接通信。</p>
+</li>
+</ul>
+<p>注：每次查询接收方MAC地址都会在本地ARP缓存中，根据接收方的IP地址寻找相对应的MAC地址，如果没有找到，则会根据ARP协议在以太网进行广播查找。</p>
+<blockquote>
+<p>在不同子网络</p>
+</blockquote>
+<p>两台计算机不在同一个子网络，无法直接通过<strong>ARP协议</strong>广播查找，那么只能通过默认网关代为转发，如图。<br><img src="/2018/03/02/Internet通信（二）/img/gateway.png" alt="gateway"></p>
+<p>例如1号计算机与4号计算机请求通信，发送数据包，他将根据1号计算机的子网掩码判断与4号计算机是否在同一子网络中，发现不在同一子网络，于是就把这个数据包发送到网关A（网关A在计算机加入网络中已确定），网关A通过路由协议，根据路由转发表将该数据包转发至网关B，网关B再转发给4号计算机，4号计算机再做出响应，返回本机的MAC地址并添加到本地的ARP缓存。</p>
+<p>至此，知道发出方和接收方的IP地址和MAC地址就可以建立TCP连接了。</p>
+<h3 id="查看ARP缓存表"><a href="/2018/03/02/Internet通信（二）/#查看ARP缓存表" class="headerlink" title="查看ARP缓存表"></a>查看ARP缓存表</h3><p>打开命令窗口，输入arp -g或者arp -a，查看本地ARP缓存表，如图<br><img src="/2018/03/02/Internet通信（二）/img/ARP.jpg" alt="ARP"></p>
+<ul>
+<li><p>本地ARP缓存表只缓存与本机在同一子网的MAC地址与IP地址，不在同一子网的就只显示默认网关的MAC地址与IP地址。</p>
+</li>
+<li><p>ARP缓存类型为动态是通过ARP协议缓存的IP地址和MAC地址映射关系，缓存时间一般为两分钟，ARP缓存类型为静态则是手动设置或者默认设置的。</p>
+</li>
+</ul>
+<hr>
+<h2 id="TCP连接"><a href="/2018/03/02/Internet通信（二）/#TCP连接" class="headerlink" title="TCP连接"></a>TCP连接</h2><p>要分析TCP连接，我们必须先了解TCP协议。</p>
+<ul>
+<li><p><strong>TCP协议</strong>（Transmission Control Protocol 传输控制协议）是一种面向连接的、可靠的、基于字节流的<strong>传输层</strong>通信协议。</p>
+</li>
+<li><p><strong>TCP协议</strong>的主要功能是当应用层向TCP层发送用于网间传输的、用8位字节表示的数据流，TCP则把数据流分割成适当长度的报文段，最大传输段大小（MSS）通常受该计算机连接的网络的数据链路层的最大传送单元（MTU）限制。之后TCP把数据包传给IP层，由它来通过网络将包传送给接收端实体的TCP层。</p>
+</li>
+</ul>
+<p>所以，在网络通信下确定双方IP地址和MAC地址后，发出方发出的数据需在传输层经过TCP分割成多个适当大小(约1522字节)的数据包，然后再经网络层IP协议将该数据包转发到接收方实体的传输层。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">那么TCP连接是如何建立的？</span><br></pre></td></tr></table></figure>
+<p>这里我们将发出方成为客户端，接收方称为服务端。TCP连接的过程分为三步，可简单描述为：</p>
+<ul>
+<li><p>客户端向服务端发起TCP连接请求</p>
+</li>
+<li><p>服务端响应客户端，同意建立TCP连接</p>
+</li>
+<li><p>客户端向服务端最后确认TCP连接建立，准备发送数据</p>
+</li>
+</ul>
+<p>至此，TCP连接建立成功，该过程称为<strong>TCP三次握手</strong>，具体分析如下。</p>
+<h3 id="TCP三次握手"><a href="/2018/03/02/Internet通信（二）/#TCP三次握手" class="headerlink" title="TCP三次握手"></a>TCP三次握手</h3><p><img src="/2018/03/02/Internet通信（二）/img/tcp.png" alt="TCP"><br>在分析之前，我们先了解上图的术语含义：</p>
+<ul>
+<li><p>SYN：同步序列编号(Synchronize Sequence Numbers)，表示向接收方建立TCP连接的请求，仅在三次握手阶段有效</p>
+</li>
+<li><p>SEQ/seq：TCP数据包序列号(Sequence Number)，在TCP发送的每个数据包都会随机生成一个序列号，该序列号用于接收方对数据包的接收确认，防止丢失以及数据接收完毕后按序列号顺序组装。</p>
+</li>
+<li><p>ACK：确认编号（Acknowledgement Number），数据包的确认标志，表示对发出方发出数据包的接收确认</p>
+</li>
+<li><p>SYN_SENT：客户端发送同步标志SYN后,进入SYN_SENT状态</p>
+</li>
+<li><p>SYN_RECV：服务端确认客户端的SYN包并发送SYN包后，进入SYN_RECV状态</p>
+</li>
+<li><p>ESTABLISHED：客户端或服务端发送同步标志SYN后，对方确认后进入TCP建立状态</p>
+</li>
+</ul>
+<p>知道以上标志含义后，我们接下来分析TCP三次握手的详细过程：</p>
+<blockquote>
+<ol>
+<li><p>建立连接时，客户端向服务端发SYN包(该数据包假设SYN为j，随机产生一个值seq=x)，并将该数据包发送给服务端，客户端进入SYN_SENT状态，等待Server确认。</p>
+</li>
+<li><p>服务端收到该SYN包，必须先确认客户的SYN，发送一个ACK值为j+1的确认数据包,同时也向客户端发送一个SYN包(假设SYN=k，随机产生一个值seq=y),即发送SYN+ACK包，然后服务端进入SYN_RECV状态</p>
+</li>
+<li><p>客户端接收到服务端的SYN+ACK包后，客户端进入ESTABLISHED状态，并对服务端发送的SYN包进行确认，发送确认包ACK(ack=k+1），服务端接收到客户端的ACK包后，也进入ESTABLISHED状态，至此TCP连接成功。</p>
+</li>
+</ol>
+</blockquote>
+<p>至此，TCP三次握手成功后，TCP连接成功，通信的两台计算机就可使用TCP连接进行数据包的传输，进行网络通信。</p>
+<h3 id="TCP数据包传输"><a href="/2018/03/02/Internet通信（二）/#TCP数据包传输" class="headerlink" title="TCP数据包传输"></a>TCP数据包传输</h3><p>首先我们先了解数据包的结构，如下图<br><img src="/2018/03/02/Internet通信（二）/img/data.png" alt="TCP DATA"><br>由上图可得出，IP数据包在以太网数据包里面，TCP数据包在IP数据包里面。数据最终会被组装成以太网数据包（包含IP数据包，TCP数据包）在链接层传输，而每个以太网数据包大小约为1522字节。</p>
+<p>数据包传输过程与TCP三次握手类似，大致如下：<br><img src="/2018/03/02/Internet通信（二）/img/process.png" alt="process"></p>
+<ul>
+<li><p>客户端再TCP连接中向服务端发送一个数据请求包，假设数据包长度为100字节，随机生成的SEQ为1，ACK初始值为1</p>
+</li>
+<li><p>服务端收到该数据包后，先进行接收确认，将ACK置为101(该值由接收的数据包SEQ值和数据包大小确定)，再将请求的数据分割成多个数据包，并每个数据包生成一个SEQ值和Length值（数据包大小），然后发送给客户端</p>
+</li>
+<li><p>客户端每接收到服务端的数据包，都会对数据包进行接收确认，向服务端发送确认数据包，即是将ACK置为该数据包SEQ值和数据包大小的和,并生成一个SEQ值和Length值</p>
+</li>
+<li><p>当服务端的所有请求的数据包发送完毕后，客户端会根据数据包的SEQ值进行排序组装，然后根据<a href="https://baike.baidu.com/item/%E5%A5%97%E6%8E%A5%E5%AD%97/9637606?fr=aladdin" target="_blank" rel="noopener">套接字</a>传送到相应的应用程序，再按HTTP协议的规定进行转换使用。</p>
+</li>
+</ul>
+<h3 id="防止数据包丢失"><a href="/2018/03/02/Internet通信（二）/#防止数据包丢失" class="headerlink" title="防止数据包丢失"></a>防止数据包丢失</h3><p><img src="/2018/03/02/Internet通信（二）/img/lose.png" alt="lose"></p>
+<ul>
+<li><p>Host A主机向Host B主机发送数据包（SEQ为92，Length为8bytes），Host B主机接收到该数据包后根据该数据包的SEQ值加上Length值得出ACK值(100)，该值表示已接收到序列号为92的数据包，并期望接收到下一个SEQ（序列号）为100的数据包</p>
+</li>
+<li><p>Host A主机发出SEQ值为100的数据包发生丢失，Host B主机无法接收到SEQ值为100的数据包，在接收其他数据包的同时就会一直发送ACK值为100的数据包</p>
+</li>
+<li><p>Host A主机接收到三个连续的重复ACK包就会进行丢包确认，然后重新发送SEQ值为100的数据包</p>
+</li>
+</ul>
+<p>通过以上确认接收的机制，TCP保证了不会发生数据丢失的情况。</p>
+<h3 id="慢启动"><a href="/2018/03/02/Internet通信（二）/#慢启动" class="headerlink" title="慢启动"></a>慢启动</h3><p>在Internert通信下，数据的传输速率肯定是越快越好，但是如果数据传输的太快，接收方接收的速率跟不上，那么就很有可能会发生大量数据包丢失的情况，同时也会对发出方的性能造成影响。同时，数据包的传输速率也是不稳定的，带宽小、路由器过热、缓存溢出等许多因素都会对传输速率造成影响。TCP协议为了做到效率与可靠性的统一，设计了一个慢启动（slow start）机制，利用慢启动来控制数据的传输速率。</p>
+<blockquote>
+<p>慢启动的主要作用是当TCP开始在一个网络中传输数据或发现数据丢失并开始重发时，首先慢慢的对网路实际容量进行试探，避免由于发送了过量的数据而导致阻塞。</p>
+</blockquote>
+<p>默认情况下，接收方每次接收TCP 数据包，就要发送一个确认消息ACK包，代表接收确认，同时该ACK包会携带以下两个信息：</p>
+<ul>
+<li><p>期待要收到下一个数据包的编号，即ACK值</p>
+</li>
+<li><p>接收方的接收窗口的剩余容量</p>
+</li>
+</ul>
+<p>发送方根据这两个信息就可以大概推测接收方的接收速度，从而逐步降低或增加发送速率。</p>
+<hr>
+<h2 id="TCP四次挥手"><a href="/2018/03/02/Internet通信（二）/#TCP四次挥手" class="headerlink" title="TCP四次挥手"></a>TCP四次挥手</h2><p>在数据传输完毕之后会进行TCP四次挥手即是TCP连接关闭，TCP需要进行四次挥手的原因在于TCP连接是全双工,即双方通信的，每个方向都必须单独进行关闭。<br><img src="/2018/03/02/Internet通信（二）/img/close.jpg" alt="close"><br>注：FIN – 结束标志。</p>
+<blockquote>
+<ol>
+<li><p>客户端发送一个FIN，关闭客户端到服务端的数据传送,进入FIN-WAIT-1状态。</p>
+</li>
+<li><p>服务端收到这个FIN，返回一个确认ACK包(ack值为u+1),进入CLOSE-WAIT状态。</p>
+</li>
+<li><p>服务端也发送一个FIN给客户端，关闭与客户端的连接，进入LAST-ACK状态。</p>
+</li>
+<li><p>客户端发回ACK包确认，ack值为w+1,最后TCP连接关闭。</p>
+</li>
+</ol>
+</blockquote>
+<h2 id="总结"><a href="/2018/03/02/Internet通信（二）/#总结" class="headerlink" title="总结"></a>总结</h2><p>本文参考了大量的文章，但是大多数文章都是讲解得不详细或者不够深入，也有一些好的文章做参考，再结合自己的理解来描述表达，让大家可以更清晰的理解详细过程。为了使本文内容更加准确无误，也做了大量的研究，若还有部分内容描述不正确，欢迎指正。下篇文章会主要讲解浏览器渲染过程。</p>
+<p><br><br><br><br><br></p>
+<h2 id="参考文献"><a href="/2018/03/02/Internet通信（二）/#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ul>
+<li><p><a href="http://www.ruanyifeng.com/blog/2017/06/tcp-protocol.html" target="_blank" rel="noopener">TCP 协议简介</a></p>
+</li>
+<li><p><a href="http://www.ruanyifeng.com/blog/2012/06/internet_protocol_suite_part_ii.html" target="_blank" rel="noopener">互联网协议入门（二）</a></p>
+</li>
+<li><p><a href="https://baike.baidu.com/item/TCP/33012?fr=aladdin" target="_blank" rel="noopener">TCP百度百科</a></p>
+</li>
+</ul>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> Internet </tag>
+            
+            <tag> 计算机网络基础 </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Internet通信（一）]]></title>
+      <url>/2018/02/27/Internet%E9%80%9A%E4%BF%A1%EF%BC%88%E4%B8%80%EF%BC%89/</url>
+      <content type="html"><![CDATA[<h2 id="概述"><a href="/2018/02/27/Internet通信（一）/#概述" class="headerlink" title="概述"></a>概述</h2><p>网络通信的过程十分复杂，本文只简单分析网络通信的过程以及相关的协议概述，从最常见的例子：”从浏览器输入url至呈现整个页面”。分析整个网络通信的过程，希望能对网络通信有个总体的认识，网络通信的整体认识对我们理解网络有非常大的帮助。由于文章过长，我将分为多个章节描述，如若描述有误，敬请指正。</p>
+<p>在分析网络通信之前，我们不妨好好思考一下这个问题？<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">当我们在浏览器输入www.qq.com，点击Enter，至页面呈现，其中发生了什么？</span><br></pre></td></tr></table></figure></p>
+<p><img src="/2018/02/27/Internet通信（一）/img/url.png" alt="url"></p>
+<p>这涉及到整个Internet通信的过程，涉及的范围非常大，我粗略归结为以下几个过程：</p>
+<ul>
+<li>DNS域名解析</li>
+<li>确定接收方MAC地址</li>
+<li>TCP连接</li>
+<li>HTTP请求</li>
+<li>浏览器渲染页面</li>
+</ul>
+<p>在分析该过程之前，我们先了解一些网络的基本知识以及相关协议。</p>
+<h2 id="网络模型"><a href="/2018/02/27/Internet通信（一）/#网络模型" class="headerlink" title="网络模型"></a>网络模型</h2><p> 网络可分为七层，四层或者五层模型，这里我们将网络分为五层，网络五层模型，如下图：<br><img src="/2018/02/27/Internet通信（一）/img/internet.png" alt="Internet"><br>自上而下，分别为应用层，传输层，网络层，链接层和实体层（物理层），每层都有相关的协议和功能，并且都需要下一层的支持。他们的功能及依赖关系，我们可以大概了解，如图(点击放大)：<br><img src="/2018/02/27/Internet通信（一）/img/detail.jpg" alt="Internet Detail"></p>
+<ol>
+<li><p>应用层HTTP协议的通信请求，规定应用程序的数据格式，基于传输层TCP协议的TCP连接</p>
+</li>
+<li><p>传输层的TCP连接，负责传输数据包，基于网络层的IP协议分配IP地址连通网络和链接层的MAC地址(网卡地址)确认接收主机</p>
+</li>
+<li><p>网络层的数据发送，基于链接层将实体层发出的电信号分组并解读，并通过ARP协议利用IP地址获取到MAC地址(网卡地址)</p>
+</li>
+<li><p>实体层（物理层），就是电脑间链接的介质，比如光纤，电缆等等，主要负责传送0和1的电信号</p>
+</li>
+</ol>
+<p>由此，我们不难得出Internet通信的前提是必须知道双方的<strong>IP地址</strong>和<strong>MAC地址(网卡地址，以太网的物理地址)</strong>，IP地址负责确定接收方的子网，MAC地址负责确定接收方的主机地址。</p>
+<hr>
+<h2 id="MAC地址"><a href="/2018/02/27/Internet通信（一）/#MAC地址" class="headerlink" title="MAC地址"></a>MAC地址</h2><p>以太网规定，连入网络的所有设备，都必须要有一块网卡，因为数据包必须从一块网卡传送到另一块网卡，而网卡的地址，就是数据包发送和接收的地址，这就叫做<strong>MAC地址</strong>。</p>
+<p>每块网卡都拥有一个全世界唯一的MAC地址，长度是48个二进制位，通常用12个十六进制数表示。如图：<br><img src="/2018/02/27/Internet通信（一）/img/mac.jpg" alt="MAC地址"></p>
+<h2 id="IP地址"><a href="/2018/02/27/Internet通信（一）/#IP地址" class="headerlink" title="IP地址"></a>IP地址</h2><p>Internet通信的前提是必须知道双方的<strong>IP地址</strong>和<strong>MAC地址</strong>，己方的<strong>MAC地址</strong>是必然知道的，但是<strong>IP地址</strong>是否知道却分为两种情况：</p>
+<ul>
+<li>静态IP地址</li>
+<li>动态IP地址</li>
+</ul>
+<h3 id="静态IP地址"><a href="/2018/02/27/Internet通信（一）/#静态IP地址" class="headerlink" title="静态IP地址"></a>静态IP地址</h3><p>静态IP地址需要用户自己专门设置，如图<br><img src="/2018/02/27/Internet通信（一）/img/staticIP.png" alt="静态IP地址"></p>
+<ul>
+<li><p><strong>IP地址</strong> – 互联网的协议地址</p>
+</li>
+<li><p><strong>子网掩码</strong> – 用于判断两个IP地址是否在同一个子网络中</p>
+</li>
+<li><p><strong>默认网关</strong> – 连接两个不同的子网络，转换协议</p>
+</li>
+<li><p><strong>DNS服务器</strong> – 用于DNS解析，将域名解析为IP地址</p>
+</li>
+</ul>
+<p>以上的四个参数缺一不可，使用手动设置的参数，每次计算机开机都可以使用相同的IP地址（如图使用的固定IP地址是：192.168.0.198）上网，所以这种情况被称为：”静态IP地址上网”，但是这样的设置是极少数人会做的，大多数人使用的都是”动态IP地址上网”。</p>
+<p>注：通用的公共DNS服务器有Google的8.8.8.8和国内的114.114.114.114，当然也可以使用运营商提供的DNS服务器。</p>
+<h3 id="动态IP地址"><a href="/2018/02/27/Internet通信（一）/#动态IP地址" class="headerlink" title="动态IP地址"></a>动态IP地址</h3><p>动态IP地址，是每台计算机默认采用的上网方式，不需要用户手动设置，每次开机会自动分配一个IP地址，如图<br><img src="/2018/02/27/Internet通信（一）/img/dynamicIP.png" alt="动态IP地址"><br>动态分配IP地址，会使用到<strong>DHCP协议</strong>，该协议规定在每个子网络中都会一台计算机负责管理本网络的所有IP地址，该计算机叫做<strong>“DHCP服务器”</strong>，每台计算机开机时候都会向<strong>“DHCP服务器”</strong>发送一个<strong>“DHCP请求”</strong>数据包，申请IP地址和相关的网络参数（子网掩码，默认网关和DNS服务器等等）。但是问题来了。。。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">DHCP服务器的MAC地址，IP地址和本机的IP地址都不知道，该如何通信？</span><br></pre></td></tr></table></figure></p>
+<p><strong>DHCP协议</strong>对<strong>“DHCP请求”</strong>的数据包做了特定的规定，发出方发送的DHCP数据包：</p>
+<ul>
+<li><p>发出方本机的MAC地址和本机未知的IP地址为0.0.0.0</p>
+</li>
+<li><p>由于接收方DHCP服务器的信息都不知道，所以接收方的MAC地址则填写为FF-FF-FF-FF-FF-FF，IP地址填写为255.255.255.255。</p>
+</li>
+</ul>
+<p>该数据包在以太网以广播的方式传输，在同一子网络的每台计算机都会接收到该数据包，并分析数据包的接收方IP地址是否与自己的IP地址相匹配，当DHCP服务器接收到该数据包，并分析到该数据包的发出方IP地址为0.0.0.0，接收方IP地址为255.255.255.255，则会确认该数据包是发送给自己的，接下来就会进行IP地址分配，再响应发送回去一个”DHCP响应”的数据包，新加入的计算机接收到该响应包，就可以确定了本机的IP地址，子网掩码，默认网关和DNS服务器等相关信息，然后就可以上网了。</p>
+<hr>
+<p>有了以上的基础知识，我们回到以下这个问题<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">当我们在浏览器输入www.qq.com，点击Enter，至页面呈现，其中发生了什么？</span><br></pre></td></tr></table></figure></p>
+<p>呈现页面的数据必须通过网络来发送和接收数据，但Internet通信的前提是必须先知道双方的MAC地址和IP地址，本机的MAC地址是必然知道的，IP地址则可以使用静态和动态IP的方式确定，那么我们只需要确定对方的MAC地址和IP地址即可实现通信。</p>
+<p>我们在浏览器输入的是<strong>www.qq.com</strong>，这是一个域名，域名在互联网中是没有什么意思的，只是为了方便用户记忆理解，但是在互联网中每个域名都可以通过DNS域名解析，解析成一个或者多个IP地址，解析确定对方的IP地址后，可以通过IP地址找到对应的主机，并确认该主机的MAC地址，最后实现通信，首先我们分析DNS域名解析的过程。</p>
+<h2 id="DNS域名解析"><a href="/2018/02/27/Internet通信（一）/#DNS域名解析" class="headerlink" title="DNS域名解析"></a>DNS域名解析</h2><p>DNS（Domain Name System 的缩写）域名解析的作用是将域名解析为IP地址，具体过程如图<br><img src="/2018/02/27/Internet通信（一）/img/dns.png" alt="dns"></p>
+<ol>
+<li><p>本机DNS解析</p>
+<ul>
+<li><p>浏览器缓存中查找www.qq.com域名解析记录，若浏览器缓存中有www.qq.com域名解析记录，则域名解析完成，返回相应的IP地址，若无，则继续下一步解析</p>
+</li>
+<li><p>在本机操作系统的DNS缓存和host文件查找www.qq.com域名解析记录；若有，则域名解析完成，返回相应的IP地址；若无，则向本地DNS服务器转发解析请求</p>
+</li>
+</ul>
+</li>
+<li><p>本地DNS服务器解析</p>
+<ul>
+<li><p>本地DNS服务器的IP地址根据用户的静态IP地址和动态IP地址设置而定，首先客户端向本地DNS服务器（LDNS）发出域名解析请求</p>
+</li>
+<li><p>本地DNS服务器先在域名解析记录缓存中查找，是否存在www.qq.com域名的解析记录，若存在，则将域名对应的IP地址，域名解析结束；若不存在,则在本地DNS服务器管理的域名内进行DNS解析，查找是否存在www.qq.com域名；若存在，返回IP地址和TTL值（Time to live 的缩写），表示缓存时间，解析结束；若不存在，则向根域名服务器发出解析请求，使用<strong>递归查询</strong>的方法进行查询</p>
+</li>
+</ul>
+</li>
+<li><p>根域名服务器解析</p>
+<ul>
+<li>www.qq.com域名真正的全称域名是www.qq.com.root，简写为www.qq.com。因为，根域名.root对于所有域名都是一样的，所以平时是省略的。根域名的下一级，叫做”顶级域名”，例如www.qq.com域名的顶级域名为.com。全球一共有十三组根域名服务器，从A.ROOT-SERVERS.NET一直到M.ROOT-SERVERS.NET。根域名服务器对www.qq.com域名进行解析查询，查找www.qq.com域名的顶级域名服务器<strong>.com</strong>的IP地址，并返回给本地DNS服务器，本地DNS服务器再向顶级域名服务器<strong>.com</strong>发出域名解析请求</li>
+</ul>
+</li>
+<li><p>顶级域名服务器解析</p>
+<ul>
+<li>顶级域名服务器<strong>.com</strong>对www.qq.com域名进行解析查询，查找www.qq.com域名的次级域名服务器<strong>.qq.com</strong>的IP地址,并返回给本地DNS服务器，本地DNS服务器再向次级域名服务器<strong>.qq.com</strong>发出域名解析请求</li>
+</ul>
+</li>
+<li><p>次级域名服务器解析</p>
+<ul>
+<li>次级域名服务器<strong>.qq.com</strong>对www.qq.com域名进行解析查询，查找www.qq.com域名的IP地址,并将该IP地址和和TTL值（Time to live 的缩写），表示缓存时间，返回给本地DNS服务器，本地DNS服务器将该结果缓存，再将IP地址返回给客户端，客户端将该解析记录缓存，至此DNS解析结束</li>
+</ul>
+</li>
+</ol>
+<h3 id="DNS优化"><a href="/2018/02/27/Internet通信（一）/#DNS优化" class="headerlink" title="DNS优化"></a>DNS优化</h3><p>由于DNS解析的过程十分复杂费时，所以DNS存在着多级缓存，提取DNS缓存的顺序大概如下：浏览器DNS缓存 – 系统DNS缓存 – 本地DNS服务器缓存 – 根域名服务器缓存 – 顶级域名服务器缓存 – 次级域名服务器缓存，解析记录的缓存时间由解析成功返回的TTL值（Time to live 的缩写）决定。</p>
+<h2 id="总结"><a href="/2018/02/27/Internet通信（一）/#总结" class="headerlink" title="总结"></a>总结</h2><p>至此，网络的基础知识和DNS域名解析讲完了，下节继续分析<strong>使用IP地址确定MAC地址</strong>和<strong>TCP连接</strong>。</p>
+<p><br><br><br><br><br></p>
+<h2 id="参考文献"><a href="/2018/02/27/Internet通信（一）/#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ul>
+<li><p><a href="http://www.ruanyifeng.com/blog/2012/05/internet_protocol_suite_part_i.html" target="_blank" rel="noopener">互联网协议入门（一）</a></p>
+</li>
+<li><p><a href="http://www.ruanyifeng.com/blog/2012/06/internet_protocol_suite_part_ii.html" target="_blank" rel="noopener">互联网协议入门（二）</a></p>
+</li>
+</ul>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> Internet </tag>
+            
+            <tag> 计算机网络基础 </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[vue-cli构建Vue项目结构分析]]></title>
+      <url>/2018/02/10/vue-cli%E6%9E%84%E5%BB%BAVue%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/</url>
+      <content type="html"><![CDATA[<h2 id="构建项目"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#构建项目" class="headerlink" title="构建项目"></a>构建项目</h2><p>使用vue-cli脚手架搭建vue项目的具体步骤如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">npm install -g vue-cli</span><br><span class="line">cd E:(跳转到项目目录)</span><br><span class="line">vue init webpack vueproject (vueproject 为项目目录名称，可行更改)</span><br><span class="line">cd vueproject</span><br><span class="line">npm install</span><br><span class="line">npm run dev</span><br></pre></td></tr></table></figure></p>
+<h2 id="项目结构分析"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#项目结构分析" class="headerlink" title="项目结构分析"></a>项目结构分析</h2><p><img src="/2018/02/10/vue-cli构建Vue项目结构分析/img/project.png" alt="项目结构"></p>
+<h2 id="package-json"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#package-json" class="headerlink" title="package.json"></a>package.json</h2><p>抽取package.json文件重要部分分析</p>
+<blockquote>
+<p>scripts字段</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&quot;scripts&quot;: &#123;</span><br><span class="line">    &quot;dev&quot;: &quot;node build/dev-server.js&quot;,</span><br><span class="line">    &quot;build&quot;: &quot;node build/build.js&quot;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>项目开发周期主要执行的两个任务分别是开发环境<code>npm run dev</code>和打包任务<code>npm run build</code>,script字段是用来指定npm相关命令的缩写的,即相当于在node环境下执行build/dev-server.js和node build/build.js文件。</p>
+<hr>
+<blockquote>
+<p>dependencies和devDependencies字段</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&quot;dependencies&quot;: &#123;</span><br><span class="line">    &quot;vue&quot;: &quot;^2.3.3&quot;,</span><br><span class="line">    &quot;vue-router&quot;: &quot;^2.6.0&quot;</span><br><span class="line">&#125;,</span><br><span class="line">&quot;devDependencies&quot;: &#123;</span><br><span class="line">    &quot;autoprefixer&quot;: &quot;^7.1.2&quot;,</span><br><span class="line">    &quot;babel-core&quot;: &quot;^6.22.1&quot;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>dependencies字段指定了项目运行时所依赖的模块，devDependencies字段指定了项目开发时所依赖的模块。项目开发应使用命令管理package.json文件：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm i --save vue              \\自动写入package.json文件的dependencies字段；</span><br><span class="line">npm i --save-dev babel-core \\自动写入package.json文件的devDependencies字段；</span><br></pre></td></tr></table></figure></p>
+<p>注：i为install的缩写</p>
+<hr>
+<blockquote>
+<p>engine和browserslist字段</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&quot;engines&quot;: &#123;</span><br><span class="line">  &quot;node&quot;: &quot;&gt;= 4.0.0&quot;,</span><br><span class="line">  &quot;npm&quot;: &quot;&gt;= 3.0.0&quot;</span><br><span class="line">&#125;,</span><br><span class="line">&quot;browserslist&quot;: [</span><br><span class="line">  &quot;&gt; 1%&quot;,</span><br><span class="line">  &quot;last 2 versions&quot;,</span><br><span class="line">  &quot;not ie &lt;= 8&quot;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<p>engines字段表示项目运行所依赖的node以及npm版本号，browserslist表示项目的浏览器支持情况，具体详情可以查看<a href="https://www.npmjs.com/package/browserslist" target="_blank" rel="noopener">https://www.npmjs.com/package/browserslist</a>。</p>
+<h2 id="build文件夹"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#build文件夹" class="headerlink" title="build文件夹"></a>build文件夹</h2><h3 id="dev-server-js"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#dev-server-js" class="headerlink" title="dev-server.js"></a>dev-server.js</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br></pre></td><td class="code"><pre><span class="line">// 检查 Node 和 npm 版本</span><br><span class="line">require(&apos;./check-versions&apos;)()</span><br><span class="line">//使用了 config/index.js</span><br><span class="line">var config = require(&apos;../config&apos;)</span><br><span class="line">// 如果 Node 的环境无法判断当前是 dev / product 环境</span><br><span class="line">if (!process.env.NODE_ENV) &#123;</span><br><span class="line">// 使用 config.dev.env.NODE_ENV 作为当前的环境</span><br><span class="line">  process.env.NODE_ENV = JSON.parse(config.dev.env.NODE_ENV)</span><br><span class="line">&#125;</span><br><span class="line">// 一个可以强制打开浏览器并跳转到指定 url 的插件</span><br><span class="line">//(可以调用默认软件打开网址、图片、文件等内容的插件,</span><br><span class="line">//这里用它来调用默认浏览器打开dev-server监听的端口，例如：localhost:8080)</span><br><span class="line">var opn = require(&apos;opn&apos;)</span><br><span class="line">// 使用 NodeJS 自带的文件路径工具</span><br><span class="line">var path = require(&apos;path&apos;)</span><br><span class="line">// 使用 express</span><br><span class="line">var express = require(&apos;express&apos;)</span><br><span class="line">// 使用 webpack</span><br><span class="line">var webpack = require(&apos;webpack&apos;)</span><br><span class="line">// http-proxy可以实现转发所有请求代理到后端真实API地址，以实现前后端开发完全分离</span><br><span class="line">// 在config/index.js中可以对proxyTable想进行配置</span><br><span class="line">var proxyMiddleware = require(&apos;http-proxy-middleware&apos;)</span><br><span class="line">// 根据 Node 环境来引入相应的 webpack 配置</span><br><span class="line">var webpackConfig = process.env.NODE_ENV === &apos;testing&apos;</span><br><span class="line">  ? require(&apos;./webpack.prod.conf&apos;)</span><br><span class="line">  : require(&apos;./webpack.dev.conf&apos;)</span><br><span class="line"></span><br><span class="line">// default port where dev server listens for incoming traffic</span><br><span class="line">// 如果没有指定运行端口，使用 config.dev.port 作为运行端口</span><br><span class="line">var port = process.env.PORT || config.dev.port</span><br><span class="line">// automatically open browser, if not set will be false</span><br><span class="line">// 用于判断是否要自动打开浏览器的布尔变量，当配置文件中没有设置自动打开浏览器的时候其值为 false</span><br><span class="line">var autoOpenBrowser = !!config.dev.autoOpenBrowser</span><br><span class="line"></span><br><span class="line">// Define HTTP proxies to your custom API backend</span><br><span class="line">// https://github.com/chimurai/http-proxy-middleware</span><br><span class="line">// 定义 HTTP 代理表，代理到 API 服务器</span><br><span class="line">// 使用 config.dev.proxyTable 的配置作为 proxyTable 的代理配置</span><br><span class="line">var proxyTable = config.dev.proxyTable</span><br><span class="line">// 使用 express 启动一个服务</span><br><span class="line">var app = express()</span><br><span class="line">// 启动 webpack 进行编译</span><br><span class="line">var compiler = webpack(webpackConfig)</span><br><span class="line">// 启动 webpack-dev-middleware，将 编译后的文件暂存到内存中</span><br><span class="line">//(webpack-dev-middleware使用compiler对象来对相应的文件进行编译和绑定</span><br><span class="line">// 编译绑定后将得到的产物存放在内存中而没有写进磁盘</span><br><span class="line">// 将这个中间件交给express使用之后即可访问这些编译后的产品文件)</span><br><span class="line">var devMiddleware = require(&apos;webpack-dev-middleware&apos;)(compiler, &#123;</span><br><span class="line">  publicPath: webpackConfig.output.publicPath,</span><br><span class="line">  quiet: true</span><br><span class="line">&#125;)</span><br><span class="line">// 启动 webpack-hot-middleware，也就是我们常说的 Hot-reload用于实现热重载功能的中间件</span><br><span class="line">var hotMiddleware = require(&apos;webpack-hot-middleware&apos;)(compiler, &#123;</span><br><span class="line">  log: () =&gt; &#123;&#125;,</span><br><span class="line">  heartbeat: 2000</span><br><span class="line">&#125;)</span><br><span class="line">// force page reload when html-webpack-plugin template changes</span><br><span class="line">// 当html-webpack-plugin提交之后通过热重载中间件发布重载动作使得页面重载</span><br><span class="line">compiler.plugin(&apos;compilation&apos;, function (compilation) &#123;</span><br><span class="line">  compilation.plugin(&apos;html-webpack-plugin-after-emit&apos;, function (data, cb) &#123;</span><br><span class="line">    hotMiddleware.publish(&#123; action: &apos;reload&apos; &#125;)</span><br><span class="line">    cb()</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">// proxy api requests</span><br><span class="line">// 将 proxyTable 中的请求配置挂在到启动的 express 服务上</span><br><span class="line">//Object.keys()返回对象的键名数组</span><br><span class="line">Object.keys(proxyTable).forEach(function (context) &#123;</span><br><span class="line">  var options = proxyTable[context]</span><br><span class="line">  if (typeof options === &apos;string&apos;) &#123;</span><br><span class="line">    options = &#123; target: options &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  app.use(proxyMiddleware(options.filter || context, options))</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">// handle fallback for HTML5 history API</span><br><span class="line">// 使用 connect-history-api-fallback 匹配资源，如果不匹配就可以重定向到指定地址，常用于SPA</span><br><span class="line">app.use(require(&apos;connect-history-api-fallback&apos;)())</span><br><span class="line"></span><br><span class="line">// serve webpack bundle output</span><br><span class="line">// 将暂存到内存中的 webpack 编译后的文件挂在到 express 服务上</span><br><span class="line">app.use(devMiddleware)</span><br><span class="line"></span><br><span class="line">// enable hot-reload and state-preserving</span><br><span class="line">// compilation error display</span><br><span class="line">// 将热重载中间件(Hot-reload)挂在到express服务器上</span><br><span class="line">app.use(hotMiddleware)</span><br><span class="line"></span><br><span class="line">// serve pure static assets</span><br><span class="line">// 拼接 static 文件夹的静态资源路径</span><br><span class="line">var staticPath = path.posix.join(config.dev.assetsPublicPath, config.dev.assetsSubDirectory)</span><br><span class="line">// 为静态资源提供响应服务</span><br><span class="line">app.use(staticPath, express.static(&apos;./static&apos;))</span><br><span class="line">// 应用的地址信息，例如：http://localhost:8080</span><br><span class="line">var uri = &apos;http://localhost:&apos; + port</span><br><span class="line"></span><br><span class="line">var _resolve</span><br><span class="line">var readyPromise = new Promise(resolve =&gt; &#123;</span><br><span class="line">  _resolve = resolve</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">console.log(&apos;&gt; Starting dev server...&apos;)</span><br><span class="line"></span><br><span class="line">// webpack开发中间件合法（valid）之后输出提示语到控制台，表明服务器已启动</span><br><span class="line">devMiddleware.waitUntilValid(() =&gt; &#123;</span><br><span class="line">  console.log(&apos;&gt; Listening at &apos; + uri + &apos;\n&apos;)</span><br><span class="line">  // when env is testing, don&apos;t need open it</span><br><span class="line">  // 如果不是测试环境，自动打开浏览器并跳到我们的开发地址</span><br><span class="line">  if (autoOpenBrowser &amp;&amp; process.env.NODE_ENV !== &apos;testing&apos;) &#123;</span><br><span class="line">    opn(uri)</span><br><span class="line">  &#125;</span><br><span class="line">  _resolve()</span><br><span class="line">&#125;)</span><br><span class="line">//监听服务器端口</span><br><span class="line">var server = app.listen(port)</span><br><span class="line"></span><br><span class="line">module.exports = &#123;</span><br><span class="line">  ready: readyPromise,</span><br><span class="line">  close: () =&gt; &#123;</span><br><span class="line">    server.close()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该文件主要完成以下事情：</p>
+<p>1.检查node和npm的版本。</p>
+<p>2.引入相关插件和配置。</p>
+<p>3.创建express服务器和webpack编译器。</p>
+<p>4.配置开发中间件（webpack-dev-middleware）和热重载中间件（webpack-hot-middleware）。</p>
+<p>5.挂载代理服务和中间件。</p>
+<p>6.配置静态资源。</p>
+<p>7.启动服务器监听特定端口（8080）。</p>
+<p>8.自动打开浏览器并打开特定网址（localhost:8080）。</p>
+<p>注：express服务器提供静态文件服务，不过它可以使用了http-proxy-middleware,一个http请求代理的中间件。前端开发过程中需要使用到后台的API的话，可以通过配置proxyTable来将相应的后台请求代理到专用的API服务器。</p>
+<hr>
+<h3 id="build-js"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#build-js" class="headerlink" title="build.js"></a>build.js</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">// 检查 Node 和 npm 版本</span><br><span class="line">require(&apos;./check-versions&apos;)()</span><br><span class="line">//生产环境</span><br><span class="line">process.env.NODE_ENV = &apos;production&apos;</span><br><span class="line">// 一个很好看的 loading 插件</span><br><span class="line">var ora = require(&apos;ora&apos;)</span><br><span class="line">var rm = require(&apos;rimraf&apos;)</span><br><span class="line">// 使用 NodeJS 自带的文件路径插件</span><br><span class="line">var path = require(&apos;path&apos;)</span><br><span class="line">// 用于在控制台输出带颜色字体的插件</span><br><span class="line">var chalk = require(&apos;chalk&apos;)</span><br><span class="line">//加载webpack</span><br><span class="line">var webpack = require(&apos;webpack&apos;)</span><br><span class="line">//加载config中index.js</span><br><span class="line">var config = require(&apos;../config&apos;)</span><br><span class="line">//加载webpack.prod.conf</span><br><span class="line">var webpackConfig = require(&apos;./webpack.prod.conf&apos;)</span><br><span class="line"></span><br><span class="line">var spinner = ora(&apos;building for production...&apos;)</span><br><span class="line">spinner.start()// 开启loading动画</span><br><span class="line">// 拼接编译输出文件路径</span><br><span class="line">var assetsPath = path.join(config.build.assetsRoot, config.build.assetsSubDirectory);</span><br><span class="line">// 删除这个文件夹 （递归删除）</span><br><span class="line">rm(assetsPath, err =&gt; &#123;</span><br><span class="line">  if (err) throw err</span><br><span class="line">    //  开始 webpack 的编译</span><br><span class="line">  webpack(webpackConfig, function (err, stats) &#123;</span><br><span class="line">    // 编译成功的回调函数</span><br><span class="line">    spinner.stop()</span><br><span class="line">    if (err) throw err</span><br><span class="line">    process.stdout.write(stats.toString(&#123;</span><br><span class="line">      colors: true,</span><br><span class="line">      modules: false,</span><br><span class="line">      children: false,</span><br><span class="line">      chunks: false,</span><br><span class="line">      chunkModules: false</span><br><span class="line">    &#125;) + &apos;\n\n&apos;)</span><br><span class="line"></span><br><span class="line">    console.log(chalk.cyan(&apos;  Build complete.\n&apos;))</span><br><span class="line">    console.log(chalk.yellow(</span><br><span class="line">      &apos;  Tip: built files are meant to be served over an HTTP server.\n&apos; +</span><br><span class="line">      &apos;  Opening index.html over file:// won\&apos;t work.\n&apos;</span><br><span class="line">    ))</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>build.js主要作用为：</p>
+<p>1.显示打包loading动画。</p>
+<p>2.删除并创建目标文件夹。</p>
+<p>3.webpack编译源文件。</p>
+<p>4.输出打包后的文件。</p>
+<p>注：webpack编译之后会输出到配置里面指定的目标文件夹；删除目标文件夹之后再创建是为了去除旧的内容，以免产生不可预测的影响。</p>
+<hr>
+<h3 id="check-versions-js"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#check-versions-js" class="headerlink" title="check-versions.js"></a>check-versions.js</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">// 用于在控制台输出带颜色字体的插件</span><br><span class="line">var chalk = require(&apos;chalk&apos;)</span><br><span class="line">// 语义化版本检查插件</span><br><span class="line">var semver = require(&apos;semver&apos;)</span><br><span class="line">// 引入package.json</span><br><span class="line">var packageConfig = require(&apos;../package.json&apos;)</span><br><span class="line">var shell = require(&apos;shelljs&apos;)</span><br><span class="line">// 开辟子进程执行指令cmd并返回结果</span><br><span class="line">function exec (cmd) &#123;</span><br><span class="line">  return require(&apos;child_process&apos;).execSync(cmd).toString().trim()</span><br><span class="line">&#125;</span><br><span class="line">// node和npm版本需求</span><br><span class="line">var versionRequirements = [</span><br><span class="line">  &#123;</span><br><span class="line">    name: &apos;node&apos;,</span><br><span class="line">    currentVersion: semver.clean(process.version),</span><br><span class="line">    versionRequirement: packageConfig.engines.node</span><br><span class="line">  &#125;,</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">if (shell.which(&apos;npm&apos;)) &#123;</span><br><span class="line">  versionRequirements.push(&#123;</span><br><span class="line">    name: &apos;npm&apos;,</span><br><span class="line">    currentVersion: exec(&apos;npm --version&apos;),</span><br><span class="line">    versionRequirement: packageConfig.engines.npm</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">module.exports = function () &#123;</span><br><span class="line">  var warnings = []</span><br><span class="line">  // 依次判断版本是否符合要求</span><br><span class="line">  for (var i = 0; i &lt; versionRequirements.length; i++) &#123;</span><br><span class="line">    var mod = versionRequirements[i]</span><br><span class="line">    if (!semver.satisfies(mod.currentVersion, mod.versionRequirement)) &#123;</span><br><span class="line">      warnings.push(mod.name + &apos;: &apos; +</span><br><span class="line">        chalk.red(mod.currentVersion) + &apos; should be &apos; +</span><br><span class="line">        chalk.green(mod.versionRequirement)</span><br><span class="line">      )</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  // 如果有警告则将其输出到控制台</span><br><span class="line">  if (warnings.length) &#123;</span><br><span class="line">    console.log(chalk.yellow(&apos;To use this template, you must update following to modules:&apos;))</span><br><span class="line">    for (var i = 0; i &lt; warnings.length; i++) &#123;</span><br><span class="line">      var warning = warnings[i]</span><br><span class="line">      console.log(&apos;  &apos; + warning)</span><br><span class="line">    &#125;</span><br><span class="line">    process.exit(1)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该文件主要是用来检测当前环境中的node和npm版本和我们需要的是否一致的。</p>
+<hr>
+<h3 id="webpack-base-conf-js"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#webpack-base-conf-js" class="headerlink" title="webpack.base.conf.js"></a>webpack.base.conf.js</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><span class="line">// 使用 NodeJS 自带的文件路径插件</span><br><span class="line">var path = require(&apos;path&apos;)</span><br><span class="line">// 引入一些小工具</span><br><span class="line">var utils = require(&apos;./utils&apos;)</span><br><span class="line">// 引入 config/index.js</span><br><span class="line">var config = require(&apos;../config&apos;)</span><br><span class="line">var vueLoaderConfig = require(&apos;./vue-loader.conf&apos;)</span><br><span class="line"></span><br><span class="line">// 拼接我们的工作区路径为一个绝对路径</span><br><span class="line">function resolve (dir) &#123;</span><br><span class="line">  return path.join(__dirname, &apos;..&apos;, dir)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">module.exports = &#123;</span><br><span class="line">  // 配置webpack编译入口</span><br><span class="line">  entry: &#123;</span><br><span class="line">    app: &apos;./src/main.js&apos;</span><br><span class="line">  &#125;,</span><br><span class="line">  // 配置webpack输出路径和命名规则</span><br><span class="line">  output: &#123;</span><br><span class="line">    // webpack输出的目标文件夹路径（例如：/dist）</span><br><span class="line">    path: config.build.assetsRoot,</span><br><span class="line">    // webpack输出bundle文件命名格式</span><br><span class="line">    filename: &apos;[name].js&apos;,</span><br><span class="line">    // 正式发布环境下webpack编译输出的发布路径</span><br><span class="line">    publicPath: process.env.NODE_ENV === &apos;production&apos;</span><br><span class="line">      ? config.build.assetsPublicPath</span><br><span class="line">      : config.dev.assetsPublicPath</span><br><span class="line">  &#125;,</span><br><span class="line">  resolve: &#123;</span><br><span class="line">    // 自动补全的扩展名</span><br><span class="line">    extensions: [&apos;.js&apos;, &apos;.vue&apos;, &apos;.json&apos;],</span><br><span class="line">    // 路径代理,创建路径别名，有了别名之后引用模块更方便</span><br><span class="line">    // 例如:import Vue from &apos;vue/dist/vue.common.js&apos;可以写成 import Vue from &apos;vue&apos;</span><br><span class="line">    alias: &#123;</span><br><span class="line">      &apos;vue$&apos;: &apos;vue/dist/vue.esm.js&apos;,</span><br><span class="line">      &apos;@&apos;: resolve(&apos;src&apos;)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  // 配置不同类型模块的处理规则</span><br><span class="line">  module: &#123;</span><br><span class="line">    rules: [</span><br><span class="line">      &#123;</span><br><span class="line">        // 对src和test文件夹下的.js和.vue文件使用eslint-loader</span><br><span class="line">        test: /\.(js|vue)$/,</span><br><span class="line">        loader: &apos;eslint-loader&apos;,</span><br><span class="line">        enforce: &apos;pre&apos;,</span><br><span class="line">        include: [resolve(&apos;src&apos;), resolve(&apos;test&apos;)],</span><br><span class="line">        options: &#123;</span><br><span class="line">          formatter: require(&apos;eslint-friendly-formatter&apos;)</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        // 对所有.vue文件使用vue-loader</span><br><span class="line">        test: /\.vue$/,</span><br><span class="line">        loader: &apos;vue-loader&apos;,</span><br><span class="line">        options: vueLoaderConfig</span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        // 对src和test文件夹下的.js文件使用babel-loader</span><br><span class="line">        test: /\.js$/,</span><br><span class="line">        loader: &apos;babel-loader&apos;,</span><br><span class="line">        include: [resolve(&apos;src&apos;), resolve(&apos;test&apos;)]</span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        // 对图片资源文件使用url-loader，query.name指明了输出的命名规则</span><br><span class="line">        test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,</span><br><span class="line">        loader: &apos;url-loader&apos;,</span><br><span class="line">        options: &#123;</span><br><span class="line">          limit: 10000,</span><br><span class="line">          name: utils.assetsPath(&apos;img/[name].[hash:7].[ext]&apos;)</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        // 对字体资源文件使用url-loader，query.name指明了输出的命名规则</span><br><span class="line">        test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,</span><br><span class="line">        loader: &apos;url-loader&apos;,</span><br><span class="line">        options: &#123;</span><br><span class="line">          limit: 10000,</span><br><span class="line">          name: utils.assetsPath(&apos;media/[name].[hash:7].[ext]&apos;)</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      &#123;</span><br><span class="line">        test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/,</span><br><span class="line">        loader: &apos;url-loader&apos;,</span><br><span class="line">        options: &#123;</span><br><span class="line">          limit: 10000,</span><br><span class="line">          name: utils.assetsPath(&apos;fonts/[name].[hash:7].[ext]&apos;)</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    ]</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>webpack.base.conf.js主要完成了下面这些事情：</p>
+<p>1.配置webpack编译入口</p>
+<p>2.配置webpack输出路径和命名规则</p>
+<p>3.配置模块resolve规则</p>
+<p>4.配置不同类型模块的处理规则</p>
+<p>注：这个配置里面只配置了.js、.vue、图片、字体等文件的处理规则，如果需要处理其他文件可以在module.rules里面配置。</p>
+<hr>
+<h3 id="webpack-dev-conf-js"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#webpack-dev-conf-js" class="headerlink" title="webpack.dev.conf.js"></a>webpack.dev.conf.js</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">// 使用一些小工具</span><br><span class="line">var utils = require(&apos;./utils&apos;)</span><br><span class="line">// 使用 webpack</span><br><span class="line">var webpack = require(&apos;webpack&apos;)</span><br><span class="line">// 同样的使用了 config/index.js</span><br><span class="line">var config = require(&apos;../config&apos;)</span><br><span class="line">// 使用 webpack 配置合并插件,可以合并数组和对象</span><br><span class="line">var merge = require(&apos;webpack-merge&apos;)</span><br><span class="line">// 加载 webpack.base.conf，webpack基础配置</span><br><span class="line">var baseWebpackConfig = require(&apos;./webpack.base.conf&apos;)</span><br><span class="line">// 使用 html-webpack-plugin 插件，这个插件可以帮我们自动生成 html 并且注入到 .html 文件中</span><br><span class="line">//(自动注入依赖文件（link/script）的webpack插件)</span><br><span class="line">var HtmlWebpackPlugin = require(&apos;html-webpack-plugin&apos;)</span><br><span class="line">// 用于更友好地输出webpack的警告、错误等信息</span><br><span class="line">var FriendlyErrorsPlugin = require(&apos;friendly-errors-webpack-plugin&apos;)</span><br><span class="line"></span><br><span class="line">// add hot-reload related code to entry chunks</span><br><span class="line">// 将 Hol-reload 相对路径添加到 webpack.base.conf 的 对应 entry 前，指定入口js文件</span><br><span class="line">Object.keys(baseWebpackConfig.entry).forEach(function (name) &#123;</span><br><span class="line">  baseWebpackConfig.entry[name] = [&apos;./build/dev-client&apos;].concat(baseWebpackConfig.entry[name])</span><br><span class="line">&#125;)</span><br><span class="line">// 将我们 webpack.dev.conf.js 的配置和 webpack.base.conf.js 的配置合并</span><br><span class="line">module.exports = merge(baseWebpackConfig, &#123;</span><br><span class="line">  // 配置样式文件的处理规则，使用styleLoaders</span><br><span class="line">  module: &#123;</span><br><span class="line">    rules: utils.styleLoaders(&#123; sourceMap: config.dev.cssSourceMap &#125;)</span><br><span class="line">  &#125;,</span><br><span class="line">  // cheap-module-eval-source-map is faster for development</span><br><span class="line">   // 配置Source Maps。使用 #cheap-module-eval-source-map 模式作为开发工具，在开发中使用cheap-module-eval-source-map更快</span><br><span class="line">  devtool: &apos;#cheap-module-eval-source-map&apos;,</span><br><span class="line"></span><br><span class="line">  // 配置webpack插件</span><br><span class="line">  plugins: [</span><br><span class="line">    // definePlugin 接收字符串插入到代码当中, 所以你需要的话可以写上 JS 的字符串</span><br><span class="line">    new webpack.DefinePlugin(&#123;</span><br><span class="line">      &apos;process.env&apos;: config.dev.env</span><br><span class="line">    &#125;),</span><br><span class="line">    // https://github.com/glenjamin/webpack-hot-middleware#installation--usage</span><br><span class="line">    // HotModule 插件在页面进行变更的时候只会重回对应的页面模块，不会重绘整个 html 文件</span><br><span class="line">    new webpack.HotModuleReplacementPlugin(),</span><br><span class="line">     // 使用了 NoErrorsPlugin 后页面中的报错不会阻塞，但是会在编译结束后报错</span><br><span class="line">    new webpack.NoEmitOnErrorsPlugin(),</span><br><span class="line">    // https://github.com/ampedandwired/html-webpack-plugin</span><br><span class="line">    // 将 index.html 作为入口，注入 html 代码后生成 index.html文件</span><br><span class="line">    new HtmlWebpackPlugin(&#123;</span><br><span class="line">      filename: &apos;index.html&apos;,</span><br><span class="line">      template: &apos;index.html&apos;,</span><br><span class="line">      inject: true</span><br><span class="line">    &#125;),</span><br><span class="line">    new FriendlyErrorsPlugin()</span><br><span class="line">  ]</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>该文件主要完成以下事情：</p>
+<p>1.将hot-reload相关的代码添加到entry chunks。</p>
+<p>2.合并基础的webpack配置。</p>
+<p>3.使用styleLoaders。</p>
+<p>4.配置Source Maps。</p>
+<p>5.配置webpack插件。</p>
+<hr>
+<h3 id="webpack-prod-conf-js"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#webpack-prod-conf-js" class="headerlink" title="webpack.prod.conf.js"></a>webpack.prod.conf.js</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br></pre></td><td class="code"><pre><span class="line">// 使用 NodeJS 自带的文件路径插件</span><br><span class="line">var path = require(&apos;path&apos;)</span><br><span class="line">// 使用一些小工具</span><br><span class="line">var utils = require(&apos;./utils&apos;)</span><br><span class="line">// 加载 webpack</span><br><span class="line">var webpack = require(&apos;webpack&apos;)</span><br><span class="line">// 加载 confi.index.js</span><br><span class="line">var config = require(&apos;../config&apos;)</span><br><span class="line">// 加载 webpack 配置合并工具</span><br><span class="line">var merge = require(&apos;webpack-merge&apos;)</span><br><span class="line">// 加载 webpack.base.conf.js</span><br><span class="line">var baseWebpackConfig = require(&apos;./webpack.base.conf&apos;)</span><br><span class="line">//使用copy-webpack-plugin插件</span><br><span class="line">var CopyWebpackPlugin = require(&apos;copy-webpack-plugin&apos;)</span><br><span class="line">// 使用 html-webpack-plugin 插件，这个插件可以帮我们自动生成 html 并且注入到 .html 文件中</span><br><span class="line">var HtmlWebpackPlugin = require(&apos;html-webpack-plugin&apos;)</span><br><span class="line"></span><br><span class="line">// 用于从webpack生成的bundle中提取文本到特定文件中的插件</span><br><span class="line">// 可以抽取出css，js文件将其与webpack输出的bundle分离</span><br><span class="line">var ExtractTextPlugin = require(&apos;extract-text-webpack-plugin&apos;)</span><br><span class="line"></span><br><span class="line">//使用js,css压缩插件</span><br><span class="line">var OptimizeCSSPlugin = require(&apos;optimize-css-assets-webpack-plugin&apos;)</span><br><span class="line"></span><br><span class="line">//判断当前环境是否为测试环境，如是加载测试环境配置文件，否则使用config.build.env</span><br><span class="line">var env = process.env.NODE_ENV === &apos;testing&apos;</span><br><span class="line">  ? require(&apos;../config/test.env&apos;)</span><br><span class="line">  : config.build.env</span><br><span class="line">// 合并 webpack.base.conf.js</span><br><span class="line">var webpackConfig = merge(baseWebpackConfig, &#123;</span><br><span class="line">  module: &#123;</span><br><span class="line">    // 使用的 loader</span><br><span class="line">    rules: utils.styleLoaders(&#123;</span><br><span class="line">      sourceMap: config.build.productionSourceMap,</span><br><span class="line">      extract: true</span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;,</span><br><span class="line">  // 是否使用 #source-map 开发工具</span><br><span class="line">  devtool: config.build.productionSourceMap ? &apos;#source-map&apos; : false,</span><br><span class="line">  output: &#123;</span><br><span class="line">    // 编译输出目录</span><br><span class="line">    path: config.build.assetsRoot,</span><br><span class="line">    // 编译输出文件名</span><br><span class="line">    // 我们可以在 hash 后加 :6 决定使用几位 hash 值</span><br><span class="line">    filename: utils.assetsPath(&apos;js/[name].[chunkhash].js&apos;),</span><br><span class="line">    // 没有指定输出名的文件输出的文件名</span><br><span class="line">    chunkFilename: utils.assetsPath(&apos;js/[id].[chunkhash].js&apos;)</span><br><span class="line">  &#125;,</span><br><span class="line">  // 使用的插件</span><br><span class="line">  plugins: [</span><br><span class="line">    // http://vuejs.github.io/vue-loader/en/workflow/production.html</span><br><span class="line">     // definePlugin 接收字符串插入到代码当中, 所以你需要的话可以写上 JS 的字符串</span><br><span class="line">    new webpack.DefinePlugin(&#123;</span><br><span class="line">      &apos;process.env&apos;: env</span><br><span class="line">    &#125;),</span><br><span class="line">    // 压缩 js (同样可以压缩 css)</span><br><span class="line">    new webpack.optimize.UglifyJsPlugin(&#123;</span><br><span class="line">      compress: &#123;</span><br><span class="line">        warnings: false</span><br><span class="line">      &#125;,</span><br><span class="line">      sourceMap: true</span><br><span class="line">    &#125;),</span><br><span class="line">    // extract css into its own file</span><br><span class="line">    // 将 css 文件分离出来</span><br><span class="line">    new ExtractTextPlugin(&#123;</span><br><span class="line">      filename: utils.assetsPath(&apos;css/[name].[contenthash].css&apos;)</span><br><span class="line">    &#125;),</span><br><span class="line">    // Compress extracted CSS. We are using this plugin so that possible</span><br><span class="line">    // duplicated CSS from different components can be deduped.</span><br><span class="line">    new OptimizeCSSPlugin(&#123;</span><br><span class="line">      cssProcessorOptions: &#123;</span><br><span class="line">        safe: true</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;),</span><br><span class="line">    // generate dist index.html with correct asset hash for caching.</span><br><span class="line">    // you can customize output by editing /index.html</span><br><span class="line">    // see https://github.com/ampedandwired/html-webpack-plugin</span><br><span class="line">    // 输入输出的 .html 文件</span><br><span class="line">    new HtmlWebpackPlugin(&#123;</span><br><span class="line">      filename: process.env.NODE_ENV === &apos;testing&apos;</span><br><span class="line">        ? &apos;index.html&apos;</span><br><span class="line">        : config.build.index,</span><br><span class="line">      template: &apos;index.html&apos;,</span><br><span class="line">      // 是否注入 html</span><br><span class="line">      inject: true,</span><br><span class="line">      // 压缩的方式</span><br><span class="line">      minify: &#123;</span><br><span class="line">        removeComments: true,</span><br><span class="line">        collapseWhitespace: true,</span><br><span class="line">        removeAttributeQuotes: true</span><br><span class="line">        // more options:</span><br><span class="line">        // https://github.com/kangax/html-minifier#options-quick-reference</span><br><span class="line">      &#125;,</span><br><span class="line">      // necessary to consistently work with multiple chunks via CommonsChunkPlugin</span><br><span class="line">      chunksSortMode: &apos;dependency&apos;</span><br><span class="line">    &#125;),</span><br><span class="line">    // split vendor js into its own file</span><br><span class="line">    // 没有指定输出文件名的文件输出的静态文件名</span><br><span class="line">    new webpack.optimize.CommonsChunkPlugin(&#123;</span><br><span class="line">      name: &apos;vendor&apos;,</span><br><span class="line">      minChunks: function (module, count) &#123;</span><br><span class="line">        // any required modules inside node_modules are extracted to vendor</span><br><span class="line">        return (</span><br><span class="line">          module.resource &amp;&amp;</span><br><span class="line">          /\.js$/.test(module.resource) &amp;&amp;</span><br><span class="line">          module.resource.indexOf(</span><br><span class="line">            path.join(__dirname, &apos;../node_modules&apos;)</span><br><span class="line">          ) === 0</span><br><span class="line">        )</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;),</span><br><span class="line">    // extract webpack runtime and module manifest to its own file in order to</span><br><span class="line">    // prevent vendor hash from being updated whenever app bundle is updated</span><br><span class="line">    // 没有指定输出文件名的文件输出的静态文件名</span><br><span class="line">    new webpack.optimize.CommonsChunkPlugin(&#123;</span><br><span class="line">      name: &apos;manifest&apos;,</span><br><span class="line">      chunks: [&apos;vendor&apos;]</span><br><span class="line">    &#125;),</span><br><span class="line">    // copy custom static assets</span><br><span class="line">    new CopyWebpackPlugin([</span><br><span class="line">      &#123;</span><br><span class="line">        from: path.resolve(__dirname, &apos;../static&apos;),</span><br><span class="line">        to: config.build.assetsSubDirectory,</span><br><span class="line">        ignore: [&apos;.*&apos;]</span><br><span class="line">      &#125;</span><br><span class="line">    ])</span><br><span class="line">  ]</span><br><span class="line">&#125;)</span><br><span class="line">// 开启 gzip 的情况下使用下方的配置,引入compression插件进行压缩</span><br><span class="line">if (config.build.productionGzip) &#123;</span><br><span class="line">  var CompressionWebpackPlugin = require(&apos;compression-webpack-plugin&apos;)</span><br><span class="line"> // 加载 compression-webpack-plugin 插件</span><br><span class="line"> var reProductionGzipExtensions = &apos;\\.(&apos; +</span><br><span class="line">        config.build.productionGzipExtensions.join(&apos;|&apos;) +</span><br><span class="line">        &apos;)$&apos;;</span><br><span class="line">  // 使用 compression-webpack-plugin 插件进行压缩</span><br><span class="line">  webpackConfig.plugins.push(</span><br><span class="line">    new CompressionWebpackPlugin(&#123;</span><br><span class="line">      asset: &apos;[path].gz[query]&apos;,</span><br><span class="line">      algorithm: &apos;gzip&apos;,</span><br><span class="line">      test: new RegExp(reProductionGzipExtensions),</span><br><span class="line">      threshold: 10240,</span><br><span class="line">      minRatio: 0.8</span><br><span class="line">    &#125;)</span><br><span class="line">  )</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">if (config.build.bundleAnalyzerReport) &#123;</span><br><span class="line">  var BundleAnalyzerPlugin = require(&apos;webpack-bundle-analyzer&apos;).BundleAnalyzerPlugin</span><br><span class="line">  webpackConfig.plugins.push(new BundleAnalyzerPlugin())</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">module.exports = webpackConfig</span><br></pre></td></tr></table></figure>
+<p>该文件主要用处：</p>
+<p>1.合并基础的webpack.base.conf.js文件配置。</p>
+<p>2.使用styleLoaders。</p>
+<p>3.配置webpack的输出路径。</p>
+<p>4.配置webpack插件。</p>
+<p>5.gzip模式下的webpack插件配置。</p>
+<p>6.webpack-bundle分析。</p>
+<p>注：webpack插件里面使用了压缩代码以及抽离css文件等插件。</p>
+<hr>
+<h2 id="config文件夹"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#config文件夹" class="headerlink" title="config文件夹"></a>config文件夹</h2><h3 id="index-js"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#index-js" class="headerlink" title="index.js"></a>index.js</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line">// 使用 NodeJS 自带的文件路径插件</span><br><span class="line">var path = require(&apos;path&apos;)</span><br><span class="line"></span><br><span class="line">module.exports = &#123;</span><br><span class="line">  // production 环境</span><br><span class="line">  build: &#123;</span><br><span class="line">    // 使用 config/prod.env.js 中定义的编译环境</span><br><span class="line">    env: require(&apos;./prod.env&apos;),</span><br><span class="line">    // 编译输入的 index.html 文件</span><br><span class="line">    index: path.resolve(__dirname, &apos;../dist/index.html&apos;),</span><br><span class="line">    // 编译输出的静态资源根路径</span><br><span class="line">    assetsRoot: path.resolve(__dirname, &apos;../dist&apos;),</span><br><span class="line">    // 编译输出的二级目录</span><br><span class="line">    assetsSubDirectory: &apos;static&apos;,</span><br><span class="line">    // 编译发布上线路径的根目录，可配置为资源服务器域名或 CDN 域名</span><br><span class="line">    assetsPublicPath: &apos;./&apos;,</span><br><span class="line">    // 是否开启 cssSourceMap</span><br><span class="line">    productionSourceMap: true,</span><br><span class="line">    // Gzip off by default as many popular static hosts such as</span><br><span class="line">    // Surge or Netlify already gzip all static assets for you.</span><br><span class="line">    // Before setting to `true`, make sure to:</span><br><span class="line">    // npm install --save-dev compression-webpack-plugin</span><br><span class="line">    // 是否开启 gzip,默认不开启</span><br><span class="line">    productionGzip: false,</span><br><span class="line">    // gzip模式下需要压缩的文件的扩展名</span><br><span class="line">    productionGzipExtensions: [&apos;js&apos;, &apos;css&apos;],</span><br><span class="line">    // Run the build command with an extra argument to</span><br><span class="line">    // View the bundle analyzer report after build finishes:</span><br><span class="line">    // `npm run build --report`</span><br><span class="line">    // Set to `true` or `false` to always turn it on or off</span><br><span class="line">    bundleAnalyzerReport: process.env.npm_config_report</span><br><span class="line">  &#125;,</span><br><span class="line">  // dev 环境</span><br><span class="line">  dev: &#123;</span><br><span class="line">    // 使用 config/dev.env.js 中定义的编译环境</span><br><span class="line">    env: require(&apos;./dev.env&apos;),</span><br><span class="line">    // 运行测试页面的端口</span><br><span class="line">    port: 8087,</span><br><span class="line">    // 启动dev-server之后自动打开浏览器</span><br><span class="line">    autoOpenBrowser: true,</span><br><span class="line">    // 编译输出的二级目录</span><br><span class="line">    assetsSubDirectory: &apos;static&apos;,</span><br><span class="line">    // 编译发布上线路径的根目录，可配置为资源服务器域名或 CDN 域名</span><br><span class="line">    assetsPublicPath: &apos;/&apos;,</span><br><span class="line">    // 需要 proxyTable 代理的接口（可跨域）</span><br><span class="line">    proxyTable: &#123;&#125;,</span><br><span class="line">    //静态网址</span><br><span class="line">    /*proxyTable: &#123;</span><br><span class="line"></span><br><span class="line">      // 下面的示例将代理请求/api/posts/1到http://jsonplaceholder.typicode.com/posts/1。</span><br><span class="line">      &apos;/api&apos;: &#123;</span><br><span class="line">        target: &apos;http://jsonplaceholder.typicode.com&apos;,</span><br><span class="line">        changeOrigin: true,</span><br><span class="line">        pathRewrite: &#123;</span><br><span class="line">          &apos;^/api&apos;: &apos;&apos;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;*/</span><br><span class="line">    //changeOrigin:true,那么本地会虚拟一个服务端接收你的请求并代你发送该请求，这样就不会有跨域问题了，当然这只适用于开发环境。</span><br><span class="line">    // 除了静态网址之外，您还可以使用glob模式来匹配URL，例如/api/**。有关详细信息，请参阅上下文匹配。</span><br><span class="line">    // 此外，您可以提供一个filter可以是自定义函数的选项，以确定请求是否应被代理：</span><br><span class="line">    /*proxyTable: &#123;</span><br><span class="line">      &apos;*&apos;: &#123;</span><br><span class="line">            target: &apos;http://jsonplaceholder.typicode.com&apos;,</span><br><span class="line">            filter: function (pathname, req) &#123;</span><br><span class="line">              return pathname.match(&apos;^/api&apos;) &amp;&amp; req.method === &apos;GET&apos;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;*/</span><br><span class="line"></span><br><span class="line">    // CSS Sourcemaps off by default because relative paths are &quot;buggy&quot;</span><br><span class="line">    // with this option, according to the CSS-Loader README</span><br><span class="line">    // (https://github.com/webpack/css-loader#sourcemaps)</span><br><span class="line">    // In our experience, they generally work as expected,</span><br><span class="line">    // just be aware of this issue when enabling this option.</span><br><span class="line">    // 是否开启 cssSourceMap</span><br><span class="line">    cssSourceMap: false</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该文件配置了开发和生产两种环境下的配置。</p>
+<hr>
+<h2 id="总结"><a href="/2018/02/10/vue-cli构建Vue项目结构分析/#总结" class="headerlink" title="总结"></a>总结</h2><p>webpack的使用博大精深，仅仅了解到这里也只是入门。代码可以直接到我的github直接拉取，仓库地址<a href="https://github.com/HeyingYe/vue-structural-analysis" target="_blank" rel="noopener">https://github.com/HeyingYe/vue-structural-analysis</a>。</p>
+]]></content>
+      
+        
+        <tags>
+            
+            <tag> vue </tag>
+            
+        </tags>
+        
+    </entry>
+    
+  
+  
+</search>

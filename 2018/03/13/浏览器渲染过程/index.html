@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+          <head>
+        <meta charset="utf-8">
+            
+            <title>
+                浏览器渲染过程 | Heying Ye&#39;s Personal Website
+            </title>
+            <meta name="theme-color" content="#4184f3">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+            <meta http-equiv="Cache-Control" content="no-cache">
+            <meta http-equiv="Expires" content="0">
+            <meta http-equiv="Pragma" content="no-cache">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+            <meta name="renderer" content="webkit">
+            <meta name="baidu-site-verification" content="8sVbjCDXTo" />
+            <meta name="baidu-site-verification" content="4htTFEpEPa" />
+            
+            
+            <link href="/favicon.ico" rel="icon"/>
+            
+
+            <link rel="stylesheet" href="/css/highlight.light.css">
+            <link rel="stylesheet" href="/css/prism-customize.css">
+            <link rel="stylesheet" href="/css/nav-icon.css">
+            <link rel="stylesheet" href="/css/waves.min.css">
+            <link rel="stylesheet" href="/css/jquery.tocify.css">
+            <link rel="stylesheet" href="/css/main.css">
+            <link rel="stylesheet" href="/css/nav-indicator.css">
+            
+  
+  <!-- 百度统计 -->
+  <script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "//hm.baidu.com/hm.js?e0579a52b8a95746289aeb877c0f84b8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+  </script>
+  
+
+  
+            <!--引入md5-->
+            <script src="/js/md5.js"></script>
+
+            </meta>
+        </meta>
+    </head>
+
+    <body>
+        <header>
+            <!-- cover image or sth. -->
+        </header>
+        <div id="main" class="m-scene">
+            
+<div class="nav-wrapper">
+
+    <div class="container">
+        <nav>
+            <div class="logo wave">
+                <a href="/" id="logo">
+                    Heying Ye&#39;s Personal Website
+                </a>
+            </div>
+            <div class="nav-toggle-icon" >
+                <div class="material-hamburger">
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                </div>
+            </div>
+            <div class="menu-wrapper">
+                <div class="nav-indicator">
+                </div>
+                <ul class="menus">
+                    
+                     
+                        <li>
+                            <a class="wave " href="/">
+                                首页
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/archives">
+                                归档
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/about">
+                                关于
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave no-smoothstate" href="https://github.com/HeyingYe">
+                                订阅
+                            </a>
+                        </li>
+                     
+                    
+                   
+                </ul>
+            </div>
+        </nav>
+    </div>
+</div>
+
+            <div class="container content">
+                <div class="scene_element scene_element--fadein">
+                    <div class="row">
+    <div class="main">
+        <article>
+          
+          <header class="post-header">
+          
+          </header>
+          <h1 class="post-title">浏览器渲染过程</h1>
+          
+          <section class="post-info">
+            <span class="post-date">2018/03/13</span>
+            
+
+            
+            <span class="post-tags">
+              <ul class="post-tag-list"><li class="post-tag-list-item"><a class="post-tag-list-link" href="/tags/Browser/">Browser</a></li></ul>
+            </span>
+            
+
+             
+                <span style="color:rgba(0,0,0,0.54);font-size: 15px;">阅读:</span>
+                  <span id="/2018/03/13/浏览器渲染过程/" class="leancloud_visitors" data-flag-title="浏览器渲染过程" style="color:rgba(0,0,0,0.54);font-size: 15px;"></span>
+              
+          </section>
+
+          <section class="post-content">
+            <h2 id="概述"><a href="/2018/03/13/浏览器渲染过程/#概述" class="headerlink" title="概述"></a>概述</h2><p>在分析浏览渲染过程之前，我们先了解进程和线程：</p>
+<ul>
+<li><p>什么是进程？</p>
+<blockquote>
+<p>进程是CPU进行资源分配的基本单位</p>
+</blockquote>
+</li>
+<li><p>什么是线程？</p>
+<blockquote>
+<p>线程是CPU调度的最小单位，是建立在进程的基础上的运行单位，共享进程的内存空间</p>
+</blockquote>
+</li>
+</ul>
+<p>那么我们可以得出结论：进程会占用系统资源，在一个进程内可以存在一个或多个线程，这就是单线程和多线程，但是无论是单线程还是多线程，都是在一个进程内。</p>
+<h2 id="多进程"><a href="/2018/03/13/浏览器渲染过程/#多进程" class="headerlink" title="多进程"></a>多进程</h2><p><img src="/2018/03/13/浏览器渲染过程/img/optimize.png" alt="浏览器进程"><br>由上图我们可以知道：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- 浏览器是多进程的</span><br><span class="line"></span><br><span class="line">- 不同类型的标签页都会开启一个新进程</span><br><span class="line"></span><br><span class="line">- 相同类型的标签页会合并成一个进程</span><br></pre></td></tr></table></figure>
+<p>上图中浏览器各个进程的主要作用如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">- 浏览器进程 </span><br><span class="line">  1. 负责管理各个标签页的创建与销毁</span><br><span class="line">  2. 负责浏览器的界面显示和功能（前进，后退，收藏等）</span><br><span class="line">  3. 负责资源的管理与下载</span><br><span class="line"></span><br><span class="line">- 第三方插件进程 </span><br><span class="line">  1. 负责每个第三方插件的使用，每个第三方插件使用时候都会创建一个对应的进程</span><br><span class="line"></span><br><span class="line">- GPU进程 </span><br><span class="line">  1. 负责3D绘制和硬件加速</span><br><span class="line"></span><br><span class="line">- 浏览器渲染进程 (本文主要分析)</span><br><span class="line">  1. 浏览器内核，主要负责HTML，CSS，JS等文件的解析和执行</span><br></pre></td></tr></table></figure></p>
+<h2 id="浏览器内核"><a href="/2018/03/13/浏览器渲染过程/#浏览器内核" class="headerlink" title="浏览器内核"></a>浏览器内核</h2><p>浏览器内核就是浏览器渲染进程，从接收下载文件后再到呈现整个页面的过程，由浏览器渲染进程负责，主要的流程如下：</p>
+<blockquote>
+<ol>
+<li><p>解析HTML文件和CSS文件，加载图片等资源文件，渲染成用户看到的页面</p>
+</li>
+<li><p>执行解析js文件脚本代码</p>
+</li>
+</ol>
+</blockquote>
+<p>(本文主要讲解浏览器页面渲染过程，js脚本解析执行过程，我将会另开文章分析，所以本文有关js解析的内容都会省略)</p>
+<p>在该过程中浏览器渲染进程会开启多个线程协作完成，主要的线程以及作用如下:</p>
+<ol>
+<li><p>GUI渲染线程</p>
+<ul>
+<li><p>负责解析HTML文件构建DOM树，解析CSS结合DOM树渲染成RenderObject树，然后布局和绘制页面</p>
+</li>
+<li><p>当RenderObject树需要更新样式属性时，即发生重绘（Repaint）或RenderObject树中的元素规模尺寸，布局或显示隐藏等发生改变，即发生回流（reflow）时执行</p>
+</li>
+</ul>
+</li>
+<li><p>JS引擎线程</p>
+</li>
+<li><p>事件触发线程,</p>
+</li>
+<li><p>定时器触发器线程</p>
+</li>
+<li><p>异步http请求线程</p>
+</li>
+</ol>
+<blockquote>
+<p>注：GUI渲染线程与JS引擎线程是互斥的，因为JS引擎线程在执行过程中可能会发生重绘和回流，所以GUI渲染线程执行时候，JS引擎线程会被挂起，等待GUI渲染线程执行完毕才会执行；JS引擎线程执行时候同理</p>
+</blockquote>
+<h3 id="GUI渲染线程"><a href="/2018/03/13/浏览器渲染过程/#GUI渲染线程" class="headerlink" title="GUI渲染线程"></a>GUI渲染线程</h3><p>接下来我们主要分析GUI渲染线程执行的详细过程：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">1. 解析HTML文件，构建DOM树，同时浏览器主进程负责下载CSS文件</span><br><span class="line"></span><br><span class="line">2. CSS文件下载完成，解析CSS文件成树形的数据结构，然后结合DOM树合并成RenderObject树</span><br><span class="line"></span><br><span class="line">3. 布局RenderObject树，负责RenderObject树中的元素尺寸，位置等计算</span><br><span class="line"></span><br><span class="line">4. 绘制RenderObject树，绘制页面的像素信息</span><br><span class="line"></span><br><span class="line">5. 浏览器主进程将默认图层和复合图层交给GPU进程，GPU进程再将各个图层合成（composite），最后显示出页面</span><br></pre></td></tr></table></figure></p>
+<p>注：</p>
+<ul>
+<li><p>默认图层指的就是处于普通文档流的元素；</p>
+</li>
+<li><p>复合图层一般指使用动画执行或者<code>&lt;video&gt;&lt;iframe&gt;&lt;canvas&gt;&lt;webgl&gt;</code>等元素，也可以使用z-index将层级高的元素变成复合图层，使用复合图层可以进行硬件加速，其原理就是避免了默认图层的重绘和回流，想了解的童鞋可以自行深入研究。</p>
+</li>
+</ul>
+<p>了解GUI渲染线程的执行过程后，我们可以根据其渲染原理进行渲染优化：</p>
+<ul>
+<li><p>尽可能提前引入css文件，例如在头部引入css文件;</p>
+</li>
+<li><p>尽可能早加载css文件中引用的资源，例如自定义字体文件，可以使用预加载，在link标签加入’rel=”preload” as=”font”‘该元素属性,不然会造成渲染阻塞</p>
+</li>
+<li><p>在DOM和CSS渲染之后加载js文件，例如在尾部加载js文件，或者使用该元素属性”defer”和”async”,进行js文件异步加载，但是在不同浏览器会有兼容性问题。</p>
+</li>
+</ul>
+<h2 id="总结"><a href="/2018/03/13/浏览器渲染过程/#总结" class="headerlink" title="总结"></a>总结</h2><p>本文主要介绍了浏览器渲染过程，但是并未分析js脚本文件的解析过程，我将在下文进行分析js脚本代码是如何解析的。</p>
+
+          </section>
+        </article>
+        
+
+       
+        <div class="pager">
+          
+            <a class="post-prev pager-item" href="/2018/03/19/js引擎的执行过程（一）/" >
+              <strong class="article-nav-caption">上一篇</strong>
+              <p class="post-nav-title">js引擎的执行过程（一）</p>
+            </a>
+          
+          
+            <a class="post-next pager-item" href="/2018/03/02/Internet通信（二）/">
+              <strong class="article-nav-caption">下一篇</strong>
+              <p class="post-nav-title">Internet通信（二）</p>
+            </a>
+          
+        </div>
+        
+
+         <!-- comments -->
+        
+              <div id="gitalk-container"></div>
+
+  <link rel="stylesheet" href="/css/gitalk.css">
+  <script src="/js/gitalk.js"></script>
+  <script>
+    const gitalk = new Gitalk({
+      clientID: 'ad4f0565d8335986ed07',
+      clientSecret: 'b8650d8cfe437436552d0e071a01162d5ca8ce7b',
+      repo: 'HeyingYe.github.io',
+      owner: 'HeyingYe',
+      admin: ['HeyingYe'],
+      // id: "25859283",
+      // facebook-like distraction free mode
+      distractionFreeMode: false
+    })
+
+    gitalk.render('gitalk-container')
+  </script>
+
+        
+
+    </div>
+    
+    <aside>
+        <div id="toc">
+        </div>
+    </aside>
+    
+</div>
+
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+    <p>
+        &copy; 2019 Heying Ye
+    </p>
+    <p>
+    	Heying Ye&#39;s Personal Website
+    </p>
+</footer>
+
+<script src="/lib/jquery.js"></script>
+<script src="/lib/waves.js"></script>
+<script src="/lib/jquery-ui.js"></script>
+<script src="/lib/jquery.tocify.js"></script>
+<script src="/js/main.js"></script>
+<script src="//cdn1.lncld.net/static/js/2.5.0/av-min.js"></script>
+<script>
+    var APP_ID = 'RlVTs39iH2XgPPmtz1SnpBcd-gzGzoHsz';
+    var APP_KEY = 'WAah43CakeUFdpSNioyxwswD';
+    AV.init({
+        appId: APP_ID,
+        appKey: APP_KEY
+    });
+    // 显示次数
+    function showTime(Counter) {
+        var query = new AV.Query("Counter");
+        if($(".leancloud_visitors").length > 0){
+            var url = $(".leancloud_visitors").attr('id').trim();
+            // where field
+            query.equalTo("words", url);
+            // count 
+            query.count().then(function (number) {
+                // There are number instances of MyClass where words equals url.
+                $(document.getElementById(url)).text(number?  number : '--');
+            }, function (error) {
+                // error is an instance of AVError.
+            });
+        }
+    }
+      // 追加pv
+    function addCount(Counter) {
+        var url = $(".leancloud_visitors").length > 0 ? $(".leancloud_visitors").attr('id').trim() : 'https://heyingye.github.io/';
+        var Counter = AV.Object.extend("Counter");
+        var query = new Counter;
+        query.save({
+            words: url
+        }).then(function (object) {
+        })
+    }
+    $(function () {
+        var Counter = AV.Object.extend("Counter");
+        addCount(Counter);
+        showTime(Counter);
+    });
+</script>
+    </body>
+</html>

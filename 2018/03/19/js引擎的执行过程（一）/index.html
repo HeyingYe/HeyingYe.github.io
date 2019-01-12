@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+          <head>
+        <meta charset="utf-8">
+            
+            <title>
+                js引擎的执行过程（一） | Heying Ye&#39;s Personal Website
+            </title>
+            <meta name="theme-color" content="#4184f3">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+            <meta http-equiv="Cache-Control" content="no-cache">
+            <meta http-equiv="Expires" content="0">
+            <meta http-equiv="Pragma" content="no-cache">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+            <meta name="renderer" content="webkit">
+            <meta name="baidu-site-verification" content="8sVbjCDXTo" />
+            <meta name="baidu-site-verification" content="4htTFEpEPa" />
+            
+            
+            <link href="/favicon.ico" rel="icon"/>
+            
+
+            <link rel="stylesheet" href="/css/highlight.light.css">
+            <link rel="stylesheet" href="/css/prism-customize.css">
+            <link rel="stylesheet" href="/css/nav-icon.css">
+            <link rel="stylesheet" href="/css/waves.min.css">
+            <link rel="stylesheet" href="/css/jquery.tocify.css">
+            <link rel="stylesheet" href="/css/main.css">
+            <link rel="stylesheet" href="/css/nav-indicator.css">
+            
+  
+  <!-- 百度统计 -->
+  <script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "//hm.baidu.com/hm.js?e0579a52b8a95746289aeb877c0f84b8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+  </script>
+  
+
+  
+            <!--引入md5-->
+            <script src="/js/md5.js"></script>
+
+            </meta>
+        </meta>
+    </head>
+
+    <body>
+        <header>
+            <!-- cover image or sth. -->
+        </header>
+        <div id="main" class="m-scene">
+            
+<div class="nav-wrapper">
+
+    <div class="container">
+        <nav>
+            <div class="logo wave">
+                <a href="/" id="logo">
+                    Heying Ye&#39;s Personal Website
+                </a>
+            </div>
+            <div class="nav-toggle-icon" >
+                <div class="material-hamburger">
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                </div>
+            </div>
+            <div class="menu-wrapper">
+                <div class="nav-indicator">
+                </div>
+                <ul class="menus">
+                    
+                     
+                        <li>
+                            <a class="wave " href="/">
+                                首页
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/archives">
+                                归档
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/about">
+                                关于
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave no-smoothstate" href="https://github.com/HeyingYe">
+                                订阅
+                            </a>
+                        </li>
+                     
+                    
+                   
+                </ul>
+            </div>
+        </nav>
+    </div>
+</div>
+
+            <div class="container content">
+                <div class="scene_element scene_element--fadein">
+                    <div class="row">
+    <div class="main">
+        <article>
+          
+          <header class="post-header">
+          
+          </header>
+          <h1 class="post-title">js引擎的执行过程（一）</h1>
+          
+          <section class="post-info">
+            <span class="post-date">2018/03/19</span>
+            
+
+            
+            <span class="post-tags">
+              <ul class="post-tag-list"><li class="post-tag-list-item"><a class="post-tag-list-link" href="/tags/javascript/">javascript</a></li></ul>
+            </span>
+            
+
+             
+                <span style="color:rgba(0,0,0,0.54);font-size: 15px;">阅读:</span>
+                  <span id="/2018/03/19/js引擎的执行过程（一）/" class="leancloud_visitors" data-flag-title="js引擎的执行过程（一）" style="color:rgba(0,0,0,0.54);font-size: 15px;"></span>
+              
+          </section>
+
+          <section class="post-content">
+            <h2 id="概述"><a href="/2018/03/19/js引擎的执行过程（一）/#概述" class="headerlink" title="概述"></a>概述</h2><p>js是一种非常灵活的语言，理解js引擎的执行过程对我们学习javascript非常重要，但是网上讲解js引擎的文章也大多是浅尝辄止或者只局部分析，例如只分析事件循环（Event Loop）或者变量提升等等，并没有全面深入的分析其中过程。所以我一直想把js执行的详细过程整理成一个较为详细的知识体系，帮助我们理解和整体认识js。</p>
+<p>在分析之前我们先了解以下基础概念：</p>
+<ul>
+<li><p>javascript是<strong>单线程语言</strong></p>
+<blockquote>
+<p>在浏览器中一个页面永远只有一个线程在执行js脚本代码（在不主动开启新线程的情况下）。</p>
+</blockquote>
+</li>
+<li><p>javascript是单线程语言,但是代码解析却十分的快速，不会发生解析阻塞。</p>
+<blockquote>
+<p>javascript是异步执行的，通过<strong>事件循环（Event Loop）</strong>的方式实现。</p>
+</blockquote>
+</li>
+</ul>
+<p>下面我们先通过一段较为简单的代码（暂不存在事件循环（Event Loop））来检验我们对js引擎执行过程的理解是否正确，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">&lt;script&gt;</span><br><span class="line">    console.log(fun)</span><br><span class="line"></span><br><span class="line">    console.log(person)</span><br><span class="line">&lt;/script&gt;</span><br><span class="line"></span><br><span class="line">&lt;script&gt;</span><br><span class="line">    console.log(person)</span><br><span class="line"></span><br><span class="line">    console.log(fun)</span><br><span class="line"></span><br><span class="line">    var person = &quot;Eric&quot;;</span><br><span class="line"></span><br><span class="line">    console.log(person)</span><br><span class="line"></span><br><span class="line">    function fun() &#123;</span><br><span class="line">        console.log(person)</span><br><span class="line">        var person = &quot;Tom&quot;;</span><br><span class="line">        console.log(person)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    fun()</span><br><span class="line"></span><br><span class="line">    console.log(person)</span><br><span class="line">&lt;/script&gt;</span><br></pre></td></tr></table></figure></p>
+<p>我们可以先分析上面的代码，按自己的理解分析输出的顺序是什么，然后在浏览器执行一次，结果一样的话，那么代表你已经对js引擎执行过程有了正确的理解；如果不是，则代表还存在模糊或者概念不清晰等问题。结果我们不在这里进行讨论，我们利用上面简单的例子全面分析js引擎执行过程，相信在理解该过程后我们就不难得出结果的，js引擎执行过程分为三个阶段：</p>
+<ol>
+<li><p><strong>语法分析</strong></p>
+</li>
+<li><p><strong>预编译阶段</strong></p>
+</li>
+<li><p><strong>执行阶段</strong></p>
+</li>
+</ol>
+<p>注：浏览器首先按顺序加载由<code>&lt;script&gt;</code>标签分割的js代码块，加载js代码块完毕后，立刻进入以上三个阶段，然后再按顺序查找下一个代码块，再继续执行以上三个阶段，无论是<strong>外部脚本文件</strong>（不异步加载）还是<strong>内部脚本代码块</strong>，都是一样的原理，并且都在同一个全局作用域中。</p>
+<h2 id="语法分析"><a href="/2018/03/19/js引擎的执行过程（一）/#语法分析" class="headerlink" title="语法分析"></a>语法分析</h2><p>js脚本代码块加载完毕后，会首先进入语法分析阶段。该阶段主要作用是：</p>
+<blockquote>
+<p>分析该js脚本代码块的语法是否正确，如果出现不正确，则向外抛出一个<strong>语法错误（SyntaxError）</strong>，停止该js代码块的执行，然后继续查找并加载下一个代码块；如果语法正确，则进入预编译阶段</p>
+</blockquote>
+<p>语法错误报错如下图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/syntax.jpg" alt="syntax"></p>
+<h2 id="预编译阶段"><a href="/2018/03/19/js引擎的执行过程（一）/#预编译阶段" class="headerlink" title="预编译阶段"></a>预编译阶段</h2><p>js代码块通过语法分析阶段后，语法正确则进入预编译阶段。在分析预编译阶段之前，我们先了解一下js的<strong>运行环境</strong>，运行环境主要有三种：</p>
+<ul>
+<li><p><strong>全局环境</strong>（JS代码加载完毕后，进入代码预编译即进入全局环境）</p>
+</li>
+<li><p><strong>函数环境</strong>（函数调用执行时，进入该函数环境，不同的函数则函数环境不同） </p>
+</li>
+<li><p><strong>eval</strong>（不建议使用，会有安全，性能等问题）</p>
+</li>
+</ul>
+<p>每进入一个不同的运行环境都会创建一个相应的<strong>执行上下文（Execution Context）</strong>，那么在一段JS程序中一般都会创建多个执行上下文，js引擎会以栈的方式对这些执行上下文进行处理，形成<strong>函数调用栈（call stack）</strong>，栈底永远是全局执行上下文（Global Execution Context），栈顶则永远是当前执行上下文。</p>
+<h3 id="函数调用栈"><a href="/2018/03/19/js引擎的执行过程（一）/#函数调用栈" class="headerlink" title="函数调用栈"></a>函数调用栈</h3><blockquote>
+<p>函数调用栈就是使用栈存取的方式进行管理运行环境，特点是<strong>先进后出，后进先出</strong>。</p>
+</blockquote>
+<p>我们分析下段简单的JS脚本代码来理解函数调用栈：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">function bar() &#123;</span><br><span class="line">    var B_context = &quot;Bar EC&quot;;</span><br><span class="line"></span><br><span class="line">    function foo() &#123;</span><br><span class="line">        var f_context = &quot;foo EC&quot;;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    foo()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">bar()</span><br></pre></td></tr></table></figure>
+<p>上面的代码块通过语法分析后，进入预编译阶段，如下图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/stack.png" alt="stack"></p>
+<ol>
+<li><p>首先进入全局环境，创建全局执行上下文（Global Execution Context），推入stack栈中</p>
+</li>
+<li><p>调用bar函数，进入bar函数运行环境，创建bar函数执行上下文（bar Execution Context），推入stack栈中</p>
+</li>
+<li><p>在bar函数内部调用foo函数，则再进入foo函数运行环境，创建foo函数执行上下文（foo Execution Context），推入stack栈中</p>
+</li>
+<li><p>此刻栈底是全局执行上下文（Global Execution Context），栈顶是foo函数执行上下文（foo Execution Context），如上图，由于foo函数内部没有再调用其他函数，那么则开始出栈</p>
+</li>
+<li><p>foo函数执行完毕后，栈顶foo函数执行上下文（foo Execution Context）首先出栈</p>
+</li>
+<li><p>bar函数执行完毕，bar函数执行上下文（bar Execution Context）出栈</p>
+</li>
+<li><p>Global Execution Context则在浏览器或者该标签页关闭时出栈。</p>
+</li>
+</ol>
+<p>注：不同的运行环境执行都会进入代码预编译和执行两个阶段，语法分析则在代码块加载完毕时统一检验语法</p>
+<h3 id="创建执行上下文"><a href="/2018/03/19/js引擎的执行过程（一）/#创建执行上下文" class="headerlink" title="创建执行上下文"></a>创建执行上下文</h3><p>执行上下文可理解为当前的执行环境，与该运行环境相对应。创建执行上下文的过程中，主要做了以下三件事件，如图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/ec.jpg" alt="EC"></p>
+<ol>
+<li><p><strong>创建变量对象（Variable Object）</strong></p>
+</li>
+<li><p><strong>建立作用域链（Scope Chain）</strong></p>
+</li>
+<li><p><strong>确定this的指向</strong></p>
+</li>
+</ol>
+<h4 id="创建变量对象"><a href="/2018/03/19/js引擎的执行过程（一）/#创建变量对象" class="headerlink" title="创建变量对象"></a>创建变量对象</h4><p>创建变量对象主要经过以下几个过程，如图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/VO.jpg" alt="VO"></p>
+<ol>
+<li><p>创建<strong>arguments对象</strong>，检查当前上下文中的参数，建立该对象的属性与属性值，仅在函数环境(非箭头函数)中进行，全局环境没有此过程</p>
+</li>
+<li><p>检查当前上下文的<strong>函数声明</strong>，按代码顺序查找，将找到的函数提前声明，如果当前上下文的变量对象没有该函数名属性，则在该变量对象以函数名建立一个属性，属性值则为指向该函数所在堆内存地址的引用，如果存在，则会被新的引用覆盖。</p>
+</li>
+<li><p>检查当前上下文的<strong>变量声明</strong>，按代码顺序查找，将找到的变量提前声明，如果当前上下文的变量对象没有该变量名属性，则在该变量对象以变量名建立一个属性，属性值为<strong>undefined</strong>；如果存在，则忽略该变量声明</p>
+</li>
+</ol>
+<p>注：在全局环境中，window对象就是全局执行上下文的变量对象，所有的变量和函数都是window对象的属性方法。</p>
+<p>所以函数声明提前和变量声明提升是在创建变量对象中进行的，且函数声明优先级高于变量声明。</p>
+<p>我们分析一段简单的代码，帮助我们理解该过程，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">function fun(a, b) &#123;</span><br><span class="line">    var num = 1;</span><br><span class="line"></span><br><span class="line">    function test() &#123;</span><br><span class="line"></span><br><span class="line">        console.log(num)</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">fun(2, 3)</span><br></pre></td></tr></table></figure></p>
+<p>这里我们在全局环境调用fun函数，创建fun执行上下文，这里为了方便大家理解，暂时不讲解作用域链以及this指向，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">funEC = &#123;</span><br><span class="line">    //变量对象</span><br><span class="line">    VO: &#123;</span><br><span class="line">        //arguments对象</span><br><span class="line">        arguments: &#123;</span><br><span class="line">            a: undefined,</span><br><span class="line">            b: undefined,</span><br><span class="line">            length: 2</span><br><span class="line">        &#125;,</span><br><span class="line"></span><br><span class="line">        //test函数</span><br><span class="line">        test: &lt;test reference&gt;, </span><br><span class="line"></span><br><span class="line">        //num变量</span><br><span class="line">        num: undefined</span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    //作用域链</span><br><span class="line">    scopeChain:[],</span><br><span class="line"></span><br><span class="line">    //this指向</span><br><span class="line">    this: window</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>funEC表示fun函数的执行上下文（fun Execution Context简写为funEC）</p>
+</li>
+<li><p>funE的变量对象中arguments属性，上面的写法仅为了方便大家理解，但是在浏览器中展示是以类数组的方式展示的</p>
+</li>
+<li><p><code>&lt;test reference&gt;</code>表示test函数在堆内存地址的引用</p>
+</li>
+</ul>
+<p>注：创建变量对象发生在预编译阶段，但尚未进入执行阶段，该变量对象都是不能访问的，因为此时的变量对象中的变量属性尚未赋值，值仍为undefined，只有进入执行阶段，变量对象中的变量属性进行赋值后，变量对象（Variable Object）转为活动对象（Active Object）后，才能进行访问，这个过程就是<strong>VO –&gt; AO</strong>过程。</p>
+<h4 id="建立作用域链"><a href="/2018/03/19/js引擎的执行过程（一）/#建立作用域链" class="headerlink" title="建立作用域链"></a>建立作用域链</h4><p><strong>作用域链由当前执行环境的变量对象（未进入执行阶段前）与上层环境的一系列活动对象组成，它保证了当前执行环境对符合访问权限的变量和函数的有序访问。</strong></p>
+<p>理清作用域链可以帮助我们理解js很多问题包括闭包问题等，下面我们结合一个简单的例子来理解作用域链，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">var num = 30;</span><br><span class="line"></span><br><span class="line">function test() &#123;</span><br><span class="line">    var a = 10;</span><br><span class="line"></span><br><span class="line">    function innerTest() &#123;</span><br><span class="line">        var b = 20;</span><br><span class="line"></span><br><span class="line">        return a + b</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    innerTest()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">test()</span><br></pre></td></tr></table></figure></p>
+<p>在上面的例子中，当执行到调用innerTest函数，进入innerTest函数环境。全局执行上下文和test函数执行上下文已进入执行阶段，innerTest函数执行上下文在预编译阶段创建变量对象，所以他们的活动对象和变量对象分别是AO(global)，AO(test)和VO(innerTest)，而innerTest的作用域链由当前执行环境的变量对象（未进入执行阶段前）与上层环境的一系列活动对象组成，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">innerTestEC = &#123;</span><br><span class="line"></span><br><span class="line">    //变量对象</span><br><span class="line">    VO: &#123;b: undefined&#125;, </span><br><span class="line"></span><br><span class="line">    //作用域链</span><br><span class="line">    scopeChain: [VO(innerTest), AO(test), AO(global)],  </span><br><span class="line">    </span><br><span class="line">    //this指向</span><br><span class="line">    this: window</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们这里直接使用数组表示作用域链，作用域链的活动对象或变量对象可以直接理解为作用域。</p>
+<ul>
+<li><p>作用域链的第一项永远是当前作用域（当前上下文的变量对象或活动对象）；</p>
+</li>
+<li><p>最后一项永远是全局作用域（全局执行上下文的活动对象）；</p>
+</li>
+<li><p>作用域链保证了变量和函数的有序访问，查找方式是沿着作用域链从左至右查找变量或函数，找到则会停止查找，找不到则一直查找到全局作用域，再找不到则会抛出引用错误。</p>
+</li>
+</ul>
+<blockquote>
+<p>在这里我们顺便思考一下，什么是<strong>闭包</strong>？</p>
+</blockquote>
+<p>我们先看下面一个简单例子，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">function foo() &#123;</span><br><span class="line">    var num = 20;</span><br><span class="line"></span><br><span class="line">    function bar() &#123;</span><br><span class="line">        var result = num + 20;</span><br><span class="line"></span><br><span class="line">        return result</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    bar()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">foo()</span><br></pre></td></tr></table></figure>
+<p>因为对于闭包有很多不同的理解，包括我看的一些书籍(例如js高级程序设计)，我这里直接以浏览器解析，以浏览器理解的闭包为准来分析闭包，如下图：<br><img src="/2018/03/19/js引擎的执行过程（一）/img/close.jpg" alt="闭包"></p>
+<p>如上图所示，chrome浏览器理解闭包是foo，那么按浏览器的标准是如何定义闭包的，我总结为三点：</p>
+<ol>
+<li><p><strong>在函数内部定义新函数</strong></p>
+</li>
+<li><p><strong>新函数访问外层函数的局部变量，即访问外层函数环境的活动对象属性</strong></p>
+</li>
+<li><p><strong>新函数执行，创建新的函数执行上下文，外层函数即为闭包</strong></p>
+</li>
+</ol>
+<hr>
+<h4 id="确定this指向"><a href="/2018/03/19/js引擎的执行过程（一）/#确定this指向" class="headerlink" title="确定this指向"></a>确定this指向</h4><p>在全局环境下，全局执行上下文中变量对象的this属性指向为window；函数环境下的this指向却较为灵活，需根据执行环境和执行方法确定，需要举大量的典型例子概括，本文先不做分析。</p>
+<h2 id="总结"><a href="/2018/03/19/js引擎的执行过程（一）/#总结" class="headerlink" title="总结"></a>总结</h2><p>由于涉及的内容过多，这里将第三个阶段（<strong>执行阶段</strong>）单独分离出来。另开新文章进行详细分析，下篇文章主要介绍js执行阶段中的同步任务执行和异步任务执行机制（<strong>事件循环（Event Loop）</strong>）。本文如果错误，敬请指正。</p>
+<h2 id="参考书籍"><a href="/2018/03/19/js引擎的执行过程（一）/#参考书籍" class="headerlink" title="参考书籍"></a>参考书籍</h2><ul>
+<li><strong>你不知道的javascript(上卷)</strong></li>
+</ul>
+
+          </section>
+        </article>
+        
+
+       
+        <div class="pager">
+          
+            <a class="post-prev pager-item" href="/2018/03/26/js引擎的执行过程（二）/" >
+              <strong class="article-nav-caption">上一篇</strong>
+              <p class="post-nav-title">js引擎的执行过程（二）</p>
+            </a>
+          
+          
+            <a class="post-next pager-item" href="/2018/03/13/浏览器渲染过程/">
+              <strong class="article-nav-caption">下一篇</strong>
+              <p class="post-nav-title">浏览器渲染过程</p>
+            </a>
+          
+        </div>
+        
+
+         <!-- comments -->
+        
+              <div id="gitalk-container"></div>
+
+  <link rel="stylesheet" href="/css/gitalk.css">
+  <script src="/js/gitalk.js"></script>
+  <script>
+    const gitalk = new Gitalk({
+      clientID: 'ad4f0565d8335986ed07',
+      clientSecret: 'b8650d8cfe437436552d0e071a01162d5ca8ce7b',
+      repo: 'HeyingYe.github.io',
+      owner: 'HeyingYe',
+      admin: ['HeyingYe'],
+      // id: "25859283",
+      // facebook-like distraction free mode
+      distractionFreeMode: false
+    })
+
+    gitalk.render('gitalk-container')
+  </script>
+
+        
+
+    </div>
+    
+    <aside>
+        <div id="toc">
+        </div>
+    </aside>
+    
+</div>
+
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+    <p>
+        &copy; 2019 Heying Ye
+    </p>
+    <p>
+    	Heying Ye&#39;s Personal Website
+    </p>
+</footer>
+
+<script src="/lib/jquery.js"></script>
+<script src="/lib/waves.js"></script>
+<script src="/lib/jquery-ui.js"></script>
+<script src="/lib/jquery.tocify.js"></script>
+<script src="/js/main.js"></script>
+<script src="//cdn1.lncld.net/static/js/2.5.0/av-min.js"></script>
+<script>
+    var APP_ID = 'RlVTs39iH2XgPPmtz1SnpBcd-gzGzoHsz';
+    var APP_KEY = 'WAah43CakeUFdpSNioyxwswD';
+    AV.init({
+        appId: APP_ID,
+        appKey: APP_KEY
+    });
+    // 显示次数
+    function showTime(Counter) {
+        var query = new AV.Query("Counter");
+        if($(".leancloud_visitors").length > 0){
+            var url = $(".leancloud_visitors").attr('id').trim();
+            // where field
+            query.equalTo("words", url);
+            // count 
+            query.count().then(function (number) {
+                // There are number instances of MyClass where words equals url.
+                $(document.getElementById(url)).text(number?  number : '--');
+            }, function (error) {
+                // error is an instance of AVError.
+            });
+        }
+    }
+      // 追加pv
+    function addCount(Counter) {
+        var url = $(".leancloud_visitors").length > 0 ? $(".leancloud_visitors").attr('id').trim() : 'https://heyingye.github.io/';
+        var Counter = AV.Object.extend("Counter");
+        var query = new Counter;
+        query.save({
+            words: url
+        }).then(function (object) {
+        })
+    }
+    $(function () {
+        var Counter = AV.Object.extend("Counter");
+        addCount(Counter);
+        showTime(Counter);
+    });
+</script>
+    </body>
+</html>

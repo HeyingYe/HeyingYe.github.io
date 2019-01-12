@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+          <head>
+        <meta charset="utf-8">
+            
+            <title>
+                何如使用canvas做图片处理 | Heying Ye&#39;s Personal Website
+            </title>
+            <meta name="theme-color" content="#4184f3">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+            <meta http-equiv="Cache-Control" content="no-cache">
+            <meta http-equiv="Expires" content="0">
+            <meta http-equiv="Pragma" content="no-cache">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+            <meta name="renderer" content="webkit">
+            <meta name="baidu-site-verification" content="8sVbjCDXTo" />
+            <meta name="baidu-site-verification" content="4htTFEpEPa" />
+            
+            
+            <link href="/favicon.ico" rel="icon"/>
+            
+
+            <link rel="stylesheet" href="/css/highlight.light.css">
+            <link rel="stylesheet" href="/css/prism-customize.css">
+            <link rel="stylesheet" href="/css/nav-icon.css">
+            <link rel="stylesheet" href="/css/waves.min.css">
+            <link rel="stylesheet" href="/css/jquery.tocify.css">
+            <link rel="stylesheet" href="/css/main.css">
+            <link rel="stylesheet" href="/css/nav-indicator.css">
+            
+  
+  <!-- 百度统计 -->
+  <script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "//hm.baidu.com/hm.js?e0579a52b8a95746289aeb877c0f84b8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+  </script>
+  
+
+  
+            <!--引入md5-->
+            <script src="/js/md5.js"></script>
+
+            </meta>
+        </meta>
+    </head>
+
+    <body>
+        <header>
+            <!-- cover image or sth. -->
+        </header>
+        <div id="main" class="m-scene">
+            
+<div class="nav-wrapper">
+
+    <div class="container">
+        <nav>
+            <div class="logo wave">
+                <a href="/" id="logo">
+                    Heying Ye&#39;s Personal Website
+                </a>
+            </div>
+            <div class="nav-toggle-icon" >
+                <div class="material-hamburger">
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                </div>
+            </div>
+            <div class="menu-wrapper">
+                <div class="nav-indicator">
+                </div>
+                <ul class="menus">
+                    
+                     
+                        <li>
+                            <a class="wave " href="/">
+                                首页
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/archives">
+                                归档
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/about">
+                                关于
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave no-smoothstate" href="https://github.com/HeyingYe">
+                                订阅
+                            </a>
+                        </li>
+                     
+                    
+                   
+                </ul>
+            </div>
+        </nav>
+    </div>
+</div>
+
+            <div class="container content">
+                <div class="scene_element scene_element--fadein">
+                    <div class="row">
+    <div class="main">
+        <article>
+          
+          <header class="post-header">
+          
+          </header>
+          <h1 class="post-title">何如使用canvas做图片处理</h1>
+          
+          <section class="post-info">
+            <span class="post-date">2019/01/12</span>
+            
+
+            
+            <span class="post-tags">
+              <ul class="post-tag-list"><li class="post-tag-list-item"><a class="post-tag-list-link" href="/tags/canvas/">canvas</a></li></ul>
+            </span>
+            
+
+             
+                <span style="color:rgba(0,0,0,0.54);font-size: 15px;">阅读:</span>
+                  <span id="/2019/01/12/何如使用canvas做图片处理/" class="leancloud_visitors" data-flag-title="何如使用canvas做图片处理" style="color:rgba(0,0,0,0.54);font-size: 15px;"></span>
+              
+          </section>
+
+          <section class="post-content">
+            <h2 id="概述"><a href="/2019/01/12/何如使用canvas做图片处理/#概述" class="headerlink" title="概述"></a>概述</h2><p>最近做项目遇到图片处理(图片打码和画线框)的问题，可选方案主要有两个：</p>
+<ol>
+<li>前端使用canvas做图片处理；</li>
+<li>服务端引入图片处理类库做图片处理；</li>
+</ol>
+<p>其实两个方案都可以做，但对于在该场景下：</p>
+<ol>
+<li>在页面上传图片；</li>
+<li>不需要存储图片处理结果且不需要兼容低浏览器；</li>
+</ol>
+<p>在这种场景下，在前端做处理是更好的方案；若选择服务端处理不仅会涉及到图片的上传和下载，还会涉及到服务端对图片的存储和定时清理等等一系列问题，所以本文主要介绍如何使用canvas做图片处理–&gt;打马赛克，理解这种图片处理的思路后，其他形式的图片处理原理也是一样的。</p>
+<h2 id="图片打码"><a href="/2019/01/12/何如使用canvas做图片处理/#图片打码" class="headerlink" title="图片打码"></a>图片打码</h2><h3 id="思路分析"><a href="/2019/01/12/何如使用canvas做图片处理/#思路分析" class="headerlink" title="思路分析"></a>思路分析</h3><p>图片来源主要有两种，一种是直接使用图片URL，另一种是直接操作图片文件对象（File对象）；但是无论哪一种方式，我们处理图片的原理都是一样的，主要是以下三个步骤：</p>
+<ol>
+<li>创建Image对象对图片进行加载；</li>
+<li>加载成功后，将图片写进canvas画布；</li>
+<li>最后在canvas画布取出图片的所有像素点，取出打码位置的RGB值来画马赛克即可</li>
+</ol>
+<p><img src="/2019/01/12/何如使用canvas做图片处理/img/mosaic.jpg" alt="mosaic"></p>
+<h3 id="代码实现"><a href="/2019/01/12/何如使用canvas做图片处理/#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><blockquote>
+<p><strong>1.创建Image对象对图片进行加载；</strong></p>
+</blockquote>
+<p>首先我们要对图片来源分别进行处理，第一种使用图片URL，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">var img  = new Image();</span><br><span class="line">img.src = &quot;https://avatars1.githubusercontent.com/u/25859283?v=4&quot;;</span><br></pre></td></tr></table></figure></p>
+<p>第二种是图片File对象，File对象我们不能直接使用，需要借助URL.createObjectURL()的方法将File对象转成一个可用于图片src属性的新URL对象，这个URL对象是存储在程序内存中的，所以要在不需要使用这个URL对象时，需要手动调用URL.revokeObjectURL() 方法来主动释放该内存，如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">//html</span><br><span class="line">&lt;input type=&quot;file&quot; name=&quot;&quot; value=&quot;&quot;&gt;</span><br><span class="line"></span><br><span class="line">//js</span><br><span class="line">var inputEle = document.querySelector(&quot;input&quot;);</span><br><span class="line">inputEle.addEventListener(&quot;change&quot;, function() &#123;</span><br><span class="line">    var fileObj = this.files[0]</span><br><span class="line">    var img  = new Image();</span><br><span class="line">    /*</span><br><span class="line">    当图片加载完成之后对象URL就不再需要了，释放对象URL</span><br><span class="line">    */</span><br><span class="line">    img.onload = function() &#123;</span><br><span class="line">      URL.revokeObjectURL(this.url);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    img.src = URL.createObjectURL(fileObj);</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure></p>
+<p>注： 若需要获取图片像素或转成dataURL需设置Img的crossOrigin属性来处理跨域问题，即设置img.crossOrigin = ‘’，详情可参考这篇文章<a href="https://www.zhangxinxu.com/wordpress/2018/02/crossorigin-canvas-getimagedata-cors/" target="_blank" rel="noopener">解决canvas图片getImageData,toDataURL跨域问题</a></p>
+<blockquote>
+<p><strong>2.图片加载成功后，将图片写进canvas画布；</strong></p>
+</blockquote>
+<p>将一张加载成功后的图片写进canvas画布非常简单，只需要三行代码即可，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">var canvas = document.querySelector(&quot;canvas&quot;);</span><br><span class="line">var ctx = canvas.getContext(&apos;2d&apos;);</span><br><span class="line">/*</span><br><span class="line">从左上角开始在画布上画图</span><br><span class="line">*/</span><br><span class="line">ctx.drawImage(img, 0, 0)</span><br></pre></td></tr></table></figure>
+<p>但以上代码是直接在页面的canvas元素上绘制图像的，若绘制的操作动作需要多次或反复进行，这样会导致浏览器实时不断渲染和绘制canvas元素所在的复合图层，这会在一定程度上性能页面的性能。所以我们更好的方式是动态创建一个存储在程序内存的canvas元素，然后在该canvas元素上进行画图以及马赛克绘制等等的操作，所有操作完成后直接将结果一次性绘制到页面上的canvas元素上，可提高绘制性能；</p>
+<blockquote>
+<p><strong>3.在动态画布上绘制马赛克；</strong></p>
+</blockquote>
+<p>在动态canvas画布上绘制图像完成后，我们可使用canvas上下文的getImageData()方法获取该图像的所有像素点，如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">var canvas = document.querySelector(&quot;canvas&quot;);</span><br><span class="line">var ctx = canvas.getContext(&apos;2d&apos;);</span><br><span class="line">/*</span><br><span class="line">获取图像的所有像素点</span><br><span class="line">*/</span><br><span class="line">var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);</span><br></pre></td></tr></table></figure></p>
+<p>其中imageData.data就是图像的所有像素点，也就是我们最熟悉的RGBA值，是一个一维数组，类型为Uint8ClampedArray，数组内的所有数值都不会超过2的8次方，该像素点数组内四个数值（R, G, B, A）表示一个像素点，其中A只有两个值，0和255，分别表示透明度0和1，如下<br><img src="/2019/01/12/何如使用canvas做图片处理/img/像素点.jpg" alt="像素点"><br>那么我们可根据图片的宽高得出图像像素点一维数组的长度，即<code>width * height * 4</code>，那么下面我们即可操作图像像素点来画马赛克了，假设我们每个马赛克的大小为10px，如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">var r, g, b;</span><br><span class="line">for(let y = 0; y &lt;= canvas.height; y += 10) &#123;</span><br><span class="line"></span><br><span class="line">    for(let x = 0; x &lt;= canvas.width; x += 10) &#123;</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">        获取具体位置上像素点的RGB值，然后在canvas上重新绘制图片</span><br><span class="line">         */</span><br><span class="line">        r = imageData[(y * canvas.width + x) * 4];</span><br><span class="line">        g = imageData[(y * canvas.width + x) * 4 + 1];</span><br><span class="line">        b = imageData[(y * canvas.width + x) * 4 + 2];</span><br><span class="line"></span><br><span class="line">        color = `rgb($&#123;r&#125;, $&#123;g&#125;, $&#123;b&#125;)`;</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">        在图像具体位置生成马赛克</span><br><span class="line">         */</span><br><span class="line">        ctx.fillStyle = &quot;red&quot;</span><br><span class="line">        ctx.fillRect(x, y, 10, 10)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>马赛克绘制完成后，再次调用canvas上下文的drawImage()方法将动态canvas画到页面上的canvas即可。</p>
+<h2 id="代码封装"><a href="/2019/01/12/何如使用canvas做图片处理/#代码封装" class="headerlink" title="代码封装"></a>代码封装</h2><p>这里将以上代码用面向对象的方式封装起来，实现在指定的区域打码以及画出线框，实现如下</p>
+<h3 id="构造函数"><a href="/2019/01/12/何如使用canvas做图片处理/#构造函数" class="headerlink" title="构造函数"></a>构造函数</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line"> * @param  target      Object                   canvas目标元素</span><br><span class="line"> * @param  image       String|FileObject        图片url或文件对象</span><br><span class="line"> * @param  mosaicSize  Number                   马赛克大小</span><br><span class="line"> * return  dealImage实例对象</span><br><span class="line"> */</span><br><span class="line">function DealImage(&#123;target, image, mosaicSize=20&#125;) &#123;</span><br><span class="line"></span><br><span class="line">    this.canvas = document.querySelector(target);</span><br><span class="line"></span><br><span class="line">    this._canvas = document.createElement(&quot;canvas&quot;);</span><br><span class="line"></span><br><span class="line">    if(!this.canvas &amp;&amp; this.canvas.getContext) return false</span><br><span class="line"></span><br><span class="line">    if(!image) throw new Error(&quot;缺少图片url&quot;)</span><br><span class="line"></span><br><span class="line">    this.opt = &#123;</span><br><span class="line">        image: image,</span><br><span class="line">        mosaicSize: mosaicSize,</span><br><span class="line">        ctx: this.canvas.getContext(&apos;2d&apos;),</span><br><span class="line">        _ctx: this._canvas.getContext(&apos;2d&apos;),</span><br><span class="line">        fileName: this.getFileName(image)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="原型对象"><a href="/2019/01/12/何如使用canvas做图片处理/#原型对象" class="headerlink" title="原型对象"></a>原型对象</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br></pre></td><td class="code"><pre><span class="line">DealImage.prototype = &#123;</span><br><span class="line">    constructor: DealImage,</span><br><span class="line"></span><br><span class="line">    draw: function(_opt) &#123;</span><br><span class="line"></span><br><span class="line">        var img  = new Image(),</span><br><span class="line">            self = this;</span><br><span class="line"></span><br><span class="line">        img.onload = function() &#123;</span><br><span class="line">            /*</span><br><span class="line">            获取图片上的所有像素点</span><br><span class="line">             */</span><br><span class="line">            self.getImageData(img);</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理打码</span><br><span class="line">             */</span><br><span class="line">            if(_opt.mosaic) self.drawMosaic(_opt.mosaic)</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理线框</span><br><span class="line">             */</span><br><span class="line">             if(_opt.frame) self.drawFrame(_opt.frame)</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理成功后，直接覆盖至页面上的目标canvas</span><br><span class="line">             */</span><br><span class="line">            self.opt.ctx.drawImage(self._canvas, 0, 0)</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理成功后，若传进的是file对象则主动释放内存</span><br><span class="line">            */</span><br><span class="line">            if(self.url &amp;&amp; typeof self.opt.image === &quot;object&quot;) &#123;</span><br><span class="line">              URL.revokeObjectURL(self.url);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            处理成功后的回调函数</span><br><span class="line">             */</span><br><span class="line">            if(typeof _opt.callback == &quot;function&quot;) &#123;</span><br><span class="line">                let imgBase64 = self.canvas.toDataURL(_opt.type)</span><br><span class="line">                _opt.callback(imgBase64, self.opt.fileName)</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">        设置crossOrigin属性解决资源跨域问题，</span><br><span class="line">        不然无法调用getImageData和toDataURL方法</span><br><span class="line">        https://www.zhangxinxu.com/wordpress/2018/02/crossorigin-canvas-getimagedata-cors/</span><br><span class="line">         */</span><br><span class="line">        img.crossOrigin = &apos;&apos;;</span><br><span class="line">        /*</span><br><span class="line">        判断image类型，file对象则使用URL.createObjectURL转换成blob对象</span><br><span class="line">        */</span><br><span class="line">        if(typeof this.opt.image === &quot;string&quot;)&#123;</span><br><span class="line">          img.src = this.opt.image;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">          this.url = URL.createObjectURL(this.opt.image)</span><br><span class="line">          img.src = this.url;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    drawMosaic(_opt) &#123;</span><br><span class="line"></span><br><span class="line">        if(!this.isJson(_opt.position)) throw new TypeError(&quot;参数必须是json数组对象&quot;)</span><br><span class="line"></span><br><span class="line">        var r, g, b, color, self = this;</span><br><span class="line"></span><br><span class="line">        _opt.position.forEach(function(item, index) &#123;</span><br><span class="line"></span><br><span class="line">            if(!self.isObject(item)) return false</span><br><span class="line"></span><br><span class="line">            for(let y = item.start[1]; y &lt;= item.end[1]; y += self.opt.mosaicSize) &#123;</span><br><span class="line"></span><br><span class="line">                for(let x = item.start[0]; x &lt;= item.end[0]; x += self.opt.mosaicSize) &#123;</span><br><span class="line"></span><br><span class="line">                    /*</span><br><span class="line">                    获取具体位置上像素点的RGB值，然后在canvas上重新绘制图片</span><br><span class="line">                     */</span><br><span class="line">                    r = self.imageData[(y * self._canvas.width + x) * 4];</span><br><span class="line">                    g = self.imageData[(y * self._canvas.width + x) * 4 + 1];</span><br><span class="line">                    b = self.imageData[(y * self._canvas.width + x) * 4 + 2];</span><br><span class="line"></span><br><span class="line">                    color = `rgb($&#123;r&#125;, $&#123;g&#125;, $&#123;b&#125;)`;</span><br><span class="line"></span><br><span class="line">                    /*</span><br><span class="line">                    在图像具体位置生成马赛克</span><br><span class="line">                     */</span><br><span class="line">                    self.opt._ctx.fillStyle = color</span><br><span class="line">                    self.opt._ctx.fillRect(x, y, self.opt.mosaicSize, self.opt.mosaicSize)</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;,</span><br><span class="line">    drawFrame: function(_opt) &#123;</span><br><span class="line"></span><br><span class="line">        if(!this.isJson(_opt.position)) throw new TypeError(&quot;参数必须是json数组对象&quot;)</span><br><span class="line"></span><br><span class="line">        var self = this;</span><br><span class="line"></span><br><span class="line">        _opt.position.forEach(function(item, index) &#123;</span><br><span class="line"></span><br><span class="line">            if(!self.isObject(item)) return false</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            起始一条路径，或重置当前路径</span><br><span class="line">             */</span><br><span class="line">            self.opt._ctx.beginPath();</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            把路径移动到画布中的指定点，不创建线条</span><br><span class="line">             */</span><br><span class="line">            self.opt._ctx.moveTo(item.start[0], item.start[1])</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            添加一个新点，然后在画布中创建从该点到最后指定点的线条</span><br><span class="line">             */</span><br><span class="line">            self.opt._ctx.lineTo(item.start[0], item.end[1])</span><br><span class="line">            self.opt._ctx.lineTo(item.end[1], item.end[1])</span><br><span class="line">            self.opt._ctx.lineTo(item.end[0], item.start[1])</span><br><span class="line">            self.opt._ctx.lineTo(item.start[0], item.start[1])</span><br><span class="line"></span><br><span class="line">            /*</span><br><span class="line">            绘制已定义的路径</span><br><span class="line">             */</span><br><span class="line">            self.opt._ctx.strokeStyle = _opt.color;</span><br><span class="line">            self.opt._ctx.stroke();</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;,</span><br><span class="line">    isObject: function(obj) &#123;</span><br><span class="line"></span><br><span class="line">        return Object.prototype.toString.call(obj) === &quot;[object Object]&quot;;</span><br><span class="line">    &#125;,</span><br><span class="line">    isJson: function(option) &#123;</span><br><span class="line"></span><br><span class="line">        if(!(option instanceof Array)) return false</span><br><span class="line"></span><br><span class="line">        var self = this, temp = [];</span><br><span class="line"></span><br><span class="line">        option.forEach((item, index) =&gt; &#123;</span><br><span class="line">            temp.push(self.isObject(item))</span><br><span class="line">        &#125;)</span><br><span class="line"></span><br><span class="line">        return temp.length &gt; 0 &amp;&amp; !temp.includes(false)</span><br><span class="line">    &#125;,</span><br><span class="line">    getFileName: function(image) &#123;</span><br><span class="line"></span><br><span class="line">        let filename;</span><br><span class="line">        if(typeof image == &quot;string&quot;) &#123;</span><br><span class="line"></span><br><span class="line">          let tempArr = image.split(&quot;/&quot;);</span><br><span class="line"></span><br><span class="line">          filename = tempArr[tempArr.length - 1].split(&quot;.&quot;)[0];</span><br><span class="line"></span><br><span class="line">        &#125; else &#123;</span><br><span class="line"></span><br><span class="line">          filename = image.name.split(&quot;.&quot;)[0]</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">        return filename;</span><br><span class="line">    &#125;,</span><br><span class="line">    getImageData: function(img) &#123;</span><br><span class="line"></span><br><span class="line">        this.canvas.width = img.width;</span><br><span class="line">        this.canvas.height = img.height;</span><br><span class="line"></span><br><span class="line">        this._canvas.width = img.width;</span><br><span class="line">        this._canvas.height = img.height;</span><br><span class="line"></span><br><span class="line">        this.opt._ctx.drawImage(img, 0, 0)</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line">        获取图像像素点</span><br><span class="line">         */</span><br><span class="line">        this.imageData = this.opt._ctx.getImageData(0, 0, this._canvas.width, this._canvas.height).data</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="使用"><a href="/2019/01/12/何如使用canvas做图片处理/#使用" class="headerlink" title="使用"></a>使用</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">//html</span><br><span class="line">&lt;canvas id=&quot;canvas&quot;&gt;&lt;/canvas&gt;</span><br><span class="line">&lt;p&gt;&lt;img src=&quot;&quot; alt=&quot;&quot;&gt;&lt;/p&gt;</span><br><span class="line">&lt;input type=&quot;file&quot; name=&quot;&quot; value=&quot;&quot;&gt;</span><br><span class="line"></span><br><span class="line">//js</span><br><span class="line">var inputEle = document.querySelector(&quot;input&quot;);</span><br><span class="line">inputEle.addEventListener(&quot;change&quot;, function() &#123;</span><br><span class="line">  var img = new DealImage(&#123;</span><br><span class="line">      target: &quot;#canvas&quot;,</span><br><span class="line">      mosaicSize: 10,</span><br><span class="line">      image: this.files[0]</span><br><span class="line">  &#125;)</span><br><span class="line"></span><br><span class="line">  img.draw(&#123;</span><br><span class="line">      type: &quot;image/png&quot;,</span><br><span class="line">      mosaic: &#123;</span><br><span class="line">          position: [</span><br><span class="line">              &#123;start: [50, 50], end: [150, 150]&#125;,</span><br><span class="line">              &#123;start: [200, 200], end: [300, 300]&#125;,</span><br><span class="line">          ],</span><br><span class="line">      &#125;,</span><br><span class="line">      frame: &#123;</span><br><span class="line">          position: [</span><br><span class="line">              &#123;start: [50, 50], end: [150, 150]&#125;,</span><br><span class="line">              &#123;start: [200, 200], end: [300, 300]&#125;,</span><br><span class="line">          ],</span><br><span class="line">          color: &quot;red&quot;</span><br><span class="line">      &#125;,</span><br><span class="line">      callback: function(imgBase64, filename) &#123;</span><br><span class="line"></span><br><span class="line">          let imgEle = document.querySelector(&quot;img&quot;),</span><br><span class="line">              linkEle = document.createElement(&quot;a&quot;);</span><br><span class="line"></span><br><span class="line">          imgEle.src = imgBase64;</span><br><span class="line"></span><br><span class="line">          /*</span><br><span class="line">          下载图片</span><br><span class="line">           */</span><br><span class="line">          // linkEle.style.display = &quot;none&quot;;</span><br><span class="line">          // linkEle.download = filename;</span><br><span class="line">          // linkEle.href = imgBase64;</span><br><span class="line"></span><br><span class="line">          // document.body.appendChild(linkEle);</span><br><span class="line">          // linkEle.click();</span><br><span class="line">          // // 然后移除</span><br><span class="line">          // document.body.removeChild(linkEle);</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<h2 id="总结"><a href="/2019/01/12/何如使用canvas做图片处理/#总结" class="headerlink" title="总结"></a>总结</h2><p>以上便是canvas图片处理思路以及代码实现，代码实现并不复杂。若要使用也可npm i dealimage，然后import DealImage from “dealimage”引进使用。</p>
+
+          </section>
+        </article>
+        
+
+       
+        <div class="pager">
+          
+          
+            <a class="post-next pager-item" href="/2018/04/20/柯里化函数应用/">
+              <strong class="article-nav-caption">下一篇</strong>
+              <p class="post-nav-title">柯里化函数应用</p>
+            </a>
+          
+        </div>
+        
+
+         <!-- comments -->
+        
+              <div id="gitalk-container"></div>
+
+  <link rel="stylesheet" href="/css/gitalk.css">
+  <script src="/js/gitalk.js"></script>
+  <script>
+    const gitalk = new Gitalk({
+      clientID: 'ad4f0565d8335986ed07',
+      clientSecret: 'b8650d8cfe437436552d0e071a01162d5ca8ce7b',
+      repo: 'HeyingYe.github.io',
+      owner: 'HeyingYe',
+      admin: ['HeyingYe'],
+      // id: "25859283",
+      // facebook-like distraction free mode
+      distractionFreeMode: false
+    })
+
+    gitalk.render('gitalk-container')
+  </script>
+
+        
+
+    </div>
+    
+    <aside>
+        <div id="toc">
+        </div>
+    </aside>
+    
+</div>
+
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+    <p>
+        &copy; 2019 Heying Ye
+    </p>
+    <p>
+    	Heying Ye&#39;s Personal Website
+    </p>
+</footer>
+
+<script src="/lib/jquery.js"></script>
+<script src="/lib/waves.js"></script>
+<script src="/lib/jquery-ui.js"></script>
+<script src="/lib/jquery.tocify.js"></script>
+<script src="/js/main.js"></script>
+<script src="//cdn1.lncld.net/static/js/2.5.0/av-min.js"></script>
+<script>
+    var APP_ID = 'RlVTs39iH2XgPPmtz1SnpBcd-gzGzoHsz';
+    var APP_KEY = 'WAah43CakeUFdpSNioyxwswD';
+    AV.init({
+        appId: APP_ID,
+        appKey: APP_KEY
+    });
+    // 显示次数
+    function showTime(Counter) {
+        var query = new AV.Query("Counter");
+        if($(".leancloud_visitors").length > 0){
+            var url = $(".leancloud_visitors").attr('id').trim();
+            // where field
+            query.equalTo("words", url);
+            // count 
+            query.count().then(function (number) {
+                // There are number instances of MyClass where words equals url.
+                $(document.getElementById(url)).text(number?  number : '--');
+            }, function (error) {
+                // error is an instance of AVError.
+            });
+        }
+    }
+      // 追加pv
+    function addCount(Counter) {
+        var url = $(".leancloud_visitors").length > 0 ? $(".leancloud_visitors").attr('id').trim() : 'https://heyingye.github.io/';
+        var Counter = AV.Object.extend("Counter");
+        var query = new Counter;
+        query.save({
+            words: url
+        }).then(function (object) {
+        })
+    }
+    $(function () {
+        var Counter = AV.Object.extend("Counter");
+        addCount(Counter);
+        showTime(Counter);
+    });
+</script>
+    </body>
+</html>

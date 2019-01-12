@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+          <head>
+        <meta charset="utf-8">
+            
+            <title>
+                Internet通信（二） | Heying Ye&#39;s Personal Website
+            </title>
+            <meta name="theme-color" content="#4184f3">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+            <meta http-equiv="Cache-Control" content="no-cache">
+            <meta http-equiv="Expires" content="0">
+            <meta http-equiv="Pragma" content="no-cache">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+            <meta name="renderer" content="webkit">
+            <meta name="baidu-site-verification" content="8sVbjCDXTo" />
+            <meta name="baidu-site-verification" content="4htTFEpEPa" />
+            
+            
+            <link href="/favicon.ico" rel="icon"/>
+            
+
+            <link rel="stylesheet" href="/css/highlight.light.css">
+            <link rel="stylesheet" href="/css/prism-customize.css">
+            <link rel="stylesheet" href="/css/nav-icon.css">
+            <link rel="stylesheet" href="/css/waves.min.css">
+            <link rel="stylesheet" href="/css/jquery.tocify.css">
+            <link rel="stylesheet" href="/css/main.css">
+            <link rel="stylesheet" href="/css/nav-indicator.css">
+            
+  
+  <!-- 百度统计 -->
+  <script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "//hm.baidu.com/hm.js?e0579a52b8a95746289aeb877c0f84b8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+  </script>
+  
+
+  
+            <!--引入md5-->
+            <script src="/js/md5.js"></script>
+
+            </meta>
+        </meta>
+    </head>
+
+    <body>
+        <header>
+            <!-- cover image or sth. -->
+        </header>
+        <div id="main" class="m-scene">
+            
+<div class="nav-wrapper">
+
+    <div class="container">
+        <nav>
+            <div class="logo wave">
+                <a href="/" id="logo">
+                    Heying Ye&#39;s Personal Website
+                </a>
+            </div>
+            <div class="nav-toggle-icon" >
+                <div class="material-hamburger">
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                </div>
+            </div>
+            <div class="menu-wrapper">
+                <div class="nav-indicator">
+                </div>
+                <ul class="menus">
+                    
+                     
+                        <li>
+                            <a class="wave " href="/">
+                                首页
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/archives">
+                                归档
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/about">
+                                关于
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave no-smoothstate" href="https://github.com/HeyingYe">
+                                订阅
+                            </a>
+                        </li>
+                     
+                    
+                   
+                </ul>
+            </div>
+        </nav>
+    </div>
+</div>
+
+            <div class="container content">
+                <div class="scene_element scene_element--fadein">
+                    <div class="row">
+    <div class="main">
+        <article>
+          
+          <header class="post-header">
+          
+          </header>
+          <h1 class="post-title">Internet通信（二）</h1>
+          
+          <section class="post-info">
+            <span class="post-date">2018/03/02</span>
+            
+
+            
+            <span class="post-tags">
+              <ul class="post-tag-list"><li class="post-tag-list-item"><a class="post-tag-list-link" href="/tags/Internet/">Internet</a></li><li class="post-tag-list-item"><a class="post-tag-list-link" href="/tags/计算机网络基础/">计算机网络基础</a></li></ul>
+            </span>
+            
+
+             
+                <span style="color:rgba(0,0,0,0.54);font-size: 15px;">阅读:</span>
+                  <span id="/2018/03/02/Internet通信（二）/" class="leancloud_visitors" data-flag-title="Internet通信（二）" style="color:rgba(0,0,0,0.54);font-size: 15px;"></span>
+              
+          </section>
+
+          <section class="post-content">
+            <p>上文介绍了计算机网络的基础知识和DNS域名解析，本文继续分析DNS域名解析确定接收方的IP地址后如何确定MAC地址，然后建立TCP连接。</p>
+<p>我们先对上文做个小结:</p>
+<ul>
+<li><p>Internet通信的本质就是计算机A向计算机B发送一个数据包，后者接收再回应一个数据包，依靠传递数据包来完成Internet通信，所以确定计算机地址是Internet通信的前提。</p>
+</li>
+<li><p>在互联网中，计算机地址由IP地址和MAC地址确定，发出方的MAC地址是必然知道的，IP地址则可通过用户设置<strong>静态IP地址</strong>或者通过<strong>DHCP协议</strong>动态确定，接收方的IP地址可通过DNS解析确定，那么我们确定接受方的MAC地址，即可建立Internet通信。</p>
+</li>
+</ul>
+<h2 id="接收方MAC地址"><a href="/2018/03/02/Internet通信（二）/#接收方MAC地址" class="headerlink" title="接收方MAC地址"></a>接收方MAC地址</h2><p>确定接受方MAC地址的情况分两种：发出方和接收方是否在同一子网络中。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">如何判断发出方和接收方是否在同一子网络？</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li><p>判断两台计算机是否在同一网络，需要知道双方的IP地址以及发出方本机的<strong>子网掩码</strong>。</p>
+</li>
+<li><p>将子网掩码和双方的IP地址转为二进制的IP地址，然后将二进制的子网掩码分别与二进制的IP地址做AND运算（两个数位都为1，运算结果为1，否则为0），然后比较结果，相同则表示在同一子网络中，否则就不在。</p>
+</li>
+</ul>
+<p>例如发出方的子网掩码为255.255.255.0，两台计算机IP地址分别为172.16.254.2和172.16.254.1，将子网掩码转为二进制为11111111.11111111.11111111.00000000，两台计算机IP地址转为二进制分别为10101100.00010000.11111110.00000010和10101100.00010000.11111110.00000001。两台计算机IP地分别与子网掩码做AND运算，运算结果转为十进制都是172.16.254.0，那么则表示172.16.254.2和172.16.254.1在同一子网络中。</p>
+<blockquote>
+<p>在同一子网络</p>
+</blockquote>
+<ul>
+<li><p>在同一子网络中的两台计算机，我们可使用<strong>ARP协议</strong>来确定对方的MAC地址。</p>
+</li>
+<li><p>根据<strong>ARP协议</strong>，发出方将在链接层发出一个ARP数据包（包含在以太网数据包中），该数据包包含本机的IP地址，MAC地址和所要查询的接收方主机IP地址，由于接收方IP地址尚未知道，则在接收方的MAC地址栏填写为FF:FF:FF:FF:FF:FF，表示为一个广播地址。</p>
+</li>
+<li><p>那么发出方所在子网络的每台计算机都会接收到这个数据包，然后从该数据包取出查询的IP地址，与自身的IP地址进行比较，如果相同，则做出响应，返回自身的MAC地址，并将发出方的IP地址和MAC地址映射添加到<strong>本地ARP缓存</strong>中，如果不同，则会丢弃该数据包。</p>
+</li>
+<li><p>发出方接收到接收方的响应后，会将接收方的IP地址和MAC地址映射添加到<strong>本地ARP缓存</strong>中，然后开始建立TCP连接通信。</p>
+</li>
+</ul>
+<p>注：每次查询接收方MAC地址都会在本地ARP缓存中，根据接收方的IP地址寻找相对应的MAC地址，如果没有找到，则会根据ARP协议在以太网进行广播查找。</p>
+<blockquote>
+<p>在不同子网络</p>
+</blockquote>
+<p>两台计算机不在同一个子网络，无法直接通过<strong>ARP协议</strong>广播查找，那么只能通过默认网关代为转发，如图。<br><img src="/2018/03/02/Internet通信（二）/img/gateway.png" alt="gateway"></p>
+<p>例如1号计算机与4号计算机请求通信，发送数据包，他将根据1号计算机的子网掩码判断与4号计算机是否在同一子网络中，发现不在同一子网络，于是就把这个数据包发送到网关A（网关A在计算机加入网络中已确定），网关A通过路由协议，根据路由转发表将该数据包转发至网关B，网关B再转发给4号计算机，4号计算机再做出响应，返回本机的MAC地址并添加到本地的ARP缓存。</p>
+<p>至此，知道发出方和接收方的IP地址和MAC地址就可以建立TCP连接了。</p>
+<h3 id="查看ARP缓存表"><a href="/2018/03/02/Internet通信（二）/#查看ARP缓存表" class="headerlink" title="查看ARP缓存表"></a>查看ARP缓存表</h3><p>打开命令窗口，输入arp -g或者arp -a，查看本地ARP缓存表，如图<br><img src="/2018/03/02/Internet通信（二）/img/ARP.jpg" alt="ARP"></p>
+<ul>
+<li><p>本地ARP缓存表只缓存与本机在同一子网的MAC地址与IP地址，不在同一子网的就只显示默认网关的MAC地址与IP地址。</p>
+</li>
+<li><p>ARP缓存类型为动态是通过ARP协议缓存的IP地址和MAC地址映射关系，缓存时间一般为两分钟，ARP缓存类型为静态则是手动设置或者默认设置的。</p>
+</li>
+</ul>
+<hr>
+<h2 id="TCP连接"><a href="/2018/03/02/Internet通信（二）/#TCP连接" class="headerlink" title="TCP连接"></a>TCP连接</h2><p>要分析TCP连接，我们必须先了解TCP协议。</p>
+<ul>
+<li><p><strong>TCP协议</strong>（Transmission Control Protocol 传输控制协议）是一种面向连接的、可靠的、基于字节流的<strong>传输层</strong>通信协议。</p>
+</li>
+<li><p><strong>TCP协议</strong>的主要功能是当应用层向TCP层发送用于网间传输的、用8位字节表示的数据流，TCP则把数据流分割成适当长度的报文段，最大传输段大小（MSS）通常受该计算机连接的网络的数据链路层的最大传送单元（MTU）限制。之后TCP把数据包传给IP层，由它来通过网络将包传送给接收端实体的TCP层。</p>
+</li>
+</ul>
+<p>所以，在网络通信下确定双方IP地址和MAC地址后，发出方发出的数据需在传输层经过TCP分割成多个适当大小(约1522字节)的数据包，然后再经网络层IP协议将该数据包转发到接收方实体的传输层。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">那么TCP连接是如何建立的？</span><br></pre></td></tr></table></figure>
+<p>这里我们将发出方成为客户端，接收方称为服务端。TCP连接的过程分为三步，可简单描述为：</p>
+<ul>
+<li><p>客户端向服务端发起TCP连接请求</p>
+</li>
+<li><p>服务端响应客户端，同意建立TCP连接</p>
+</li>
+<li><p>客户端向服务端最后确认TCP连接建立，准备发送数据</p>
+</li>
+</ul>
+<p>至此，TCP连接建立成功，该过程称为<strong>TCP三次握手</strong>，具体分析如下。</p>
+<h3 id="TCP三次握手"><a href="/2018/03/02/Internet通信（二）/#TCP三次握手" class="headerlink" title="TCP三次握手"></a>TCP三次握手</h3><p><img src="/2018/03/02/Internet通信（二）/img/tcp.png" alt="TCP"><br>在分析之前，我们先了解上图的术语含义：</p>
+<ul>
+<li><p>SYN：同步序列编号(Synchronize Sequence Numbers)，表示向接收方建立TCP连接的请求，仅在三次握手阶段有效</p>
+</li>
+<li><p>SEQ/seq：TCP数据包序列号(Sequence Number)，在TCP发送的每个数据包都会随机生成一个序列号，该序列号用于接收方对数据包的接收确认，防止丢失以及数据接收完毕后按序列号顺序组装。</p>
+</li>
+<li><p>ACK：确认编号（Acknowledgement Number），数据包的确认标志，表示对发出方发出数据包的接收确认</p>
+</li>
+<li><p>SYN_SENT：客户端发送同步标志SYN后,进入SYN_SENT状态</p>
+</li>
+<li><p>SYN_RECV：服务端确认客户端的SYN包并发送SYN包后，进入SYN_RECV状态</p>
+</li>
+<li><p>ESTABLISHED：客户端或服务端发送同步标志SYN后，对方确认后进入TCP建立状态</p>
+</li>
+</ul>
+<p>知道以上标志含义后，我们接下来分析TCP三次握手的详细过程：</p>
+<blockquote>
+<ol>
+<li><p>建立连接时，客户端向服务端发SYN包(该数据包假设SYN为j，随机产生一个值seq=x)，并将该数据包发送给服务端，客户端进入SYN_SENT状态，等待Server确认。</p>
+</li>
+<li><p>服务端收到该SYN包，必须先确认客户的SYN，发送一个ACK值为j+1的确认数据包,同时也向客户端发送一个SYN包(假设SYN=k，随机产生一个值seq=y),即发送SYN+ACK包，然后服务端进入SYN_RECV状态</p>
+</li>
+<li><p>客户端接收到服务端的SYN+ACK包后，客户端进入ESTABLISHED状态，并对服务端发送的SYN包进行确认，发送确认包ACK(ack=k+1），服务端接收到客户端的ACK包后，也进入ESTABLISHED状态，至此TCP连接成功。</p>
+</li>
+</ol>
+</blockquote>
+<p>至此，TCP三次握手成功后，TCP连接成功，通信的两台计算机就可使用TCP连接进行数据包的传输，进行网络通信。</p>
+<h3 id="TCP数据包传输"><a href="/2018/03/02/Internet通信（二）/#TCP数据包传输" class="headerlink" title="TCP数据包传输"></a>TCP数据包传输</h3><p>首先我们先了解数据包的结构，如下图<br><img src="/2018/03/02/Internet通信（二）/img/data.png" alt="TCP DATA"><br>由上图可得出，IP数据包在以太网数据包里面，TCP数据包在IP数据包里面。数据最终会被组装成以太网数据包（包含IP数据包，TCP数据包）在链接层传输，而每个以太网数据包大小约为1522字节。</p>
+<p>数据包传输过程与TCP三次握手类似，大致如下：<br><img src="/2018/03/02/Internet通信（二）/img/process.png" alt="process"></p>
+<ul>
+<li><p>客户端再TCP连接中向服务端发送一个数据请求包，假设数据包长度为100字节，随机生成的SEQ为1，ACK初始值为1</p>
+</li>
+<li><p>服务端收到该数据包后，先进行接收确认，将ACK置为101(该值由接收的数据包SEQ值和数据包大小确定)，再将请求的数据分割成多个数据包，并每个数据包生成一个SEQ值和Length值（数据包大小），然后发送给客户端</p>
+</li>
+<li><p>客户端每接收到服务端的数据包，都会对数据包进行接收确认，向服务端发送确认数据包，即是将ACK置为该数据包SEQ值和数据包大小的和,并生成一个SEQ值和Length值</p>
+</li>
+<li><p>当服务端的所有请求的数据包发送完毕后，客户端会根据数据包的SEQ值进行排序组装，然后根据<a href="https://baike.baidu.com/item/%E5%A5%97%E6%8E%A5%E5%AD%97/9637606?fr=aladdin" target="_blank" rel="noopener">套接字</a>传送到相应的应用程序，再按HTTP协议的规定进行转换使用。</p>
+</li>
+</ul>
+<h3 id="防止数据包丢失"><a href="/2018/03/02/Internet通信（二）/#防止数据包丢失" class="headerlink" title="防止数据包丢失"></a>防止数据包丢失</h3><p><img src="/2018/03/02/Internet通信（二）/img/lose.png" alt="lose"></p>
+<ul>
+<li><p>Host A主机向Host B主机发送数据包（SEQ为92，Length为8bytes），Host B主机接收到该数据包后根据该数据包的SEQ值加上Length值得出ACK值(100)，该值表示已接收到序列号为92的数据包，并期望接收到下一个SEQ（序列号）为100的数据包</p>
+</li>
+<li><p>Host A主机发出SEQ值为100的数据包发生丢失，Host B主机无法接收到SEQ值为100的数据包，在接收其他数据包的同时就会一直发送ACK值为100的数据包</p>
+</li>
+<li><p>Host A主机接收到三个连续的重复ACK包就会进行丢包确认，然后重新发送SEQ值为100的数据包</p>
+</li>
+</ul>
+<p>通过以上确认接收的机制，TCP保证了不会发生数据丢失的情况。</p>
+<h3 id="慢启动"><a href="/2018/03/02/Internet通信（二）/#慢启动" class="headerlink" title="慢启动"></a>慢启动</h3><p>在Internert通信下，数据的传输速率肯定是越快越好，但是如果数据传输的太快，接收方接收的速率跟不上，那么就很有可能会发生大量数据包丢失的情况，同时也会对发出方的性能造成影响。同时，数据包的传输速率也是不稳定的，带宽小、路由器过热、缓存溢出等许多因素都会对传输速率造成影响。TCP协议为了做到效率与可靠性的统一，设计了一个慢启动（slow start）机制，利用慢启动来控制数据的传输速率。</p>
+<blockquote>
+<p>慢启动的主要作用是当TCP开始在一个网络中传输数据或发现数据丢失并开始重发时，首先慢慢的对网路实际容量进行试探，避免由于发送了过量的数据而导致阻塞。</p>
+</blockquote>
+<p>默认情况下，接收方每次接收TCP 数据包，就要发送一个确认消息ACK包，代表接收确认，同时该ACK包会携带以下两个信息：</p>
+<ul>
+<li><p>期待要收到下一个数据包的编号，即ACK值</p>
+</li>
+<li><p>接收方的接收窗口的剩余容量</p>
+</li>
+</ul>
+<p>发送方根据这两个信息就可以大概推测接收方的接收速度，从而逐步降低或增加发送速率。</p>
+<hr>
+<h2 id="TCP四次挥手"><a href="/2018/03/02/Internet通信（二）/#TCP四次挥手" class="headerlink" title="TCP四次挥手"></a>TCP四次挥手</h2><p>在数据传输完毕之后会进行TCP四次挥手即是TCP连接关闭，TCP需要进行四次挥手的原因在于TCP连接是全双工,即双方通信的，每个方向都必须单独进行关闭。<br><img src="/2018/03/02/Internet通信（二）/img/close.jpg" alt="close"><br>注：FIN – 结束标志。</p>
+<blockquote>
+<ol>
+<li><p>客户端发送一个FIN，关闭客户端到服务端的数据传送,进入FIN-WAIT-1状态。</p>
+</li>
+<li><p>服务端收到这个FIN，返回一个确认ACK包(ack值为u+1),进入CLOSE-WAIT状态。</p>
+</li>
+<li><p>服务端也发送一个FIN给客户端，关闭与客户端的连接，进入LAST-ACK状态。</p>
+</li>
+<li><p>客户端发回ACK包确认，ack值为w+1,最后TCP连接关闭。</p>
+</li>
+</ol>
+</blockquote>
+<h2 id="总结"><a href="/2018/03/02/Internet通信（二）/#总结" class="headerlink" title="总结"></a>总结</h2><p>本文参考了大量的文章，但是大多数文章都是讲解得不详细或者不够深入，也有一些好的文章做参考，再结合自己的理解来描述表达，让大家可以更清晰的理解详细过程。为了使本文内容更加准确无误，也做了大量的研究，若还有部分内容描述不正确，欢迎指正。下篇文章会主要讲解浏览器渲染过程。</p>
+<p><br><br><br><br><br></p>
+<h2 id="参考文献"><a href="/2018/03/02/Internet通信（二）/#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ul>
+<li><p><a href="http://www.ruanyifeng.com/blog/2017/06/tcp-protocol.html" target="_blank" rel="noopener">TCP 协议简介</a></p>
+</li>
+<li><p><a href="http://www.ruanyifeng.com/blog/2012/06/internet_protocol_suite_part_ii.html" target="_blank" rel="noopener">互联网协议入门（二）</a></p>
+</li>
+<li><p><a href="https://baike.baidu.com/item/TCP/33012?fr=aladdin" target="_blank" rel="noopener">TCP百度百科</a></p>
+</li>
+</ul>
+
+          </section>
+        </article>
+        
+
+       
+        <div class="pager">
+          
+            <a class="post-prev pager-item" href="/2018/03/13/浏览器渲染过程/" >
+              <strong class="article-nav-caption">上一篇</strong>
+              <p class="post-nav-title">浏览器渲染过程</p>
+            </a>
+          
+          
+            <a class="post-next pager-item" href="/2018/02/27/Internet通信（一）/">
+              <strong class="article-nav-caption">下一篇</strong>
+              <p class="post-nav-title">Internet通信（一）</p>
+            </a>
+          
+        </div>
+        
+
+         <!-- comments -->
+        
+              <div id="gitalk-container"></div>
+
+  <link rel="stylesheet" href="/css/gitalk.css">
+  <script src="/js/gitalk.js"></script>
+  <script>
+    const gitalk = new Gitalk({
+      clientID: 'ad4f0565d8335986ed07',
+      clientSecret: 'b8650d8cfe437436552d0e071a01162d5ca8ce7b',
+      repo: 'HeyingYe.github.io',
+      owner: 'HeyingYe',
+      admin: ['HeyingYe'],
+      // id: "25859283",
+      // facebook-like distraction free mode
+      distractionFreeMode: false
+    })
+
+    gitalk.render('gitalk-container')
+  </script>
+
+        
+
+    </div>
+    
+    <aside>
+        <div id="toc">
+        </div>
+    </aside>
+    
+</div>
+
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+    <p>
+        &copy; 2019 Heying Ye
+    </p>
+    <p>
+    	Heying Ye&#39;s Personal Website
+    </p>
+</footer>
+
+<script src="/lib/jquery.js"></script>
+<script src="/lib/waves.js"></script>
+<script src="/lib/jquery-ui.js"></script>
+<script src="/lib/jquery.tocify.js"></script>
+<script src="/js/main.js"></script>
+<script src="//cdn1.lncld.net/static/js/2.5.0/av-min.js"></script>
+<script>
+    var APP_ID = 'RlVTs39iH2XgPPmtz1SnpBcd-gzGzoHsz';
+    var APP_KEY = 'WAah43CakeUFdpSNioyxwswD';
+    AV.init({
+        appId: APP_ID,
+        appKey: APP_KEY
+    });
+    // 显示次数
+    function showTime(Counter) {
+        var query = new AV.Query("Counter");
+        if($(".leancloud_visitors").length > 0){
+            var url = $(".leancloud_visitors").attr('id').trim();
+            // where field
+            query.equalTo("words", url);
+            // count 
+            query.count().then(function (number) {
+                // There are number instances of MyClass where words equals url.
+                $(document.getElementById(url)).text(number?  number : '--');
+            }, function (error) {
+                // error is an instance of AVError.
+            });
+        }
+    }
+      // 追加pv
+    function addCount(Counter) {
+        var url = $(".leancloud_visitors").length > 0 ? $(".leancloud_visitors").attr('id').trim() : 'https://heyingye.github.io/';
+        var Counter = AV.Object.extend("Counter");
+        var query = new Counter;
+        query.save({
+            words: url
+        }).then(function (object) {
+        })
+    }
+    $(function () {
+        var Counter = AV.Object.extend("Counter");
+        addCount(Counter);
+        showTime(Counter);
+    });
+</script>
+    </body>
+</html>

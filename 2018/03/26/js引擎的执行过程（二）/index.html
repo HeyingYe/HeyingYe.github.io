@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+          <head>
+        <meta charset="utf-8">
+            
+            <title>
+                js引擎的执行过程（二） | Heying Ye&#39;s Personal Website
+            </title>
+            <meta name="theme-color" content="#4184f3">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+            <meta http-equiv="Cache-Control" content="no-cache">
+            <meta http-equiv="Expires" content="0">
+            <meta http-equiv="Pragma" content="no-cache">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+            <meta name="renderer" content="webkit">
+            <meta name="baidu-site-verification" content="8sVbjCDXTo" />
+            <meta name="baidu-site-verification" content="4htTFEpEPa" />
+            
+            
+            <link href="/favicon.ico" rel="icon"/>
+            
+
+            <link rel="stylesheet" href="/css/highlight.light.css">
+            <link rel="stylesheet" href="/css/prism-customize.css">
+            <link rel="stylesheet" href="/css/nav-icon.css">
+            <link rel="stylesheet" href="/css/waves.min.css">
+            <link rel="stylesheet" href="/css/jquery.tocify.css">
+            <link rel="stylesheet" href="/css/main.css">
+            <link rel="stylesheet" href="/css/nav-indicator.css">
+            
+  
+  <!-- 百度统计 -->
+  <script>
+  var _hmt = _hmt || [];
+  (function() {
+    var hm = document.createElement("script");
+    hm.src = "//hm.baidu.com/hm.js?e0579a52b8a95746289aeb877c0f84b8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+  })();
+  </script>
+  
+
+  
+            <!--引入md5-->
+            <script src="/js/md5.js"></script>
+
+            </meta>
+        </meta>
+    </head>
+
+    <body>
+        <header>
+            <!-- cover image or sth. -->
+        </header>
+        <div id="main" class="m-scene">
+            
+<div class="nav-wrapper">
+
+    <div class="container">
+        <nav>
+            <div class="logo wave">
+                <a href="/" id="logo">
+                    Heying Ye&#39;s Personal Website
+                </a>
+            </div>
+            <div class="nav-toggle-icon" >
+                <div class="material-hamburger">
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                </div>
+            </div>
+            <div class="menu-wrapper">
+                <div class="nav-indicator">
+                </div>
+                <ul class="menus">
+                    
+                     
+                        <li>
+                            <a class="wave " href="/">
+                                首页
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/archives">
+                                归档
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/about">
+                                关于
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave no-smoothstate" href="https://github.com/HeyingYe">
+                                订阅
+                            </a>
+                        </li>
+                     
+                    
+                   
+                </ul>
+            </div>
+        </nav>
+    </div>
+</div>
+
+            <div class="container content">
+                <div class="scene_element scene_element--fadein">
+                    <div class="row">
+    <div class="main">
+        <article>
+          
+          <header class="post-header">
+          
+          </header>
+          <h1 class="post-title">js引擎的执行过程（二）</h1>
+          
+          <section class="post-info">
+            <span class="post-date">2018/03/26</span>
+            
+
+            
+            <span class="post-tags">
+              <ul class="post-tag-list"><li class="post-tag-list-item"><a class="post-tag-list-link" href="/tags/javascript/">javascript</a></li></ul>
+            </span>
+            
+
+             
+                <span style="color:rgba(0,0,0,0.54);font-size: 15px;">阅读:</span>
+                  <span id="/2018/03/26/js引擎的执行过程（二）/" class="leancloud_visitors" data-flag-title="js引擎的执行过程（二）" style="color:rgba(0,0,0,0.54);font-size: 15px;"></span>
+              
+          </section>
+
+          <section class="post-content">
+            <h2 id="概述"><a href="/2018/03/26/js引擎的执行过程（二）/#概述" class="headerlink" title="概述"></a>概述</h2><p>js引擎执行过程主要分为三个阶段，分别是语法分析，预编译和执行阶段，上篇文章我们介绍了语法分析和预编译阶段，那么我们先做个简单概括，如下：</p>
+<ul>
+<li><p><strong>语法分析</strong>： 分别对加载完成的代码块进行语法检验，语法正确则进入预编译阶段；不正确则停止该代码块的执行，查找下一个代码块并进行加载，加载完成再次进入该代码块的语法分析阶段</p>
+</li>
+<li><p><strong>预编译</strong>：通过语法分析阶段后，进入预编译阶段，则创建变量对象（创建arguments对象（函数运行环境下），函数声明提前解析，变量声明提升），确定作用域链以及this指向。</p>
+</li>
+</ul>
+<p>如还有疑问回头看看上篇文章<a href="https://heyingye.github.io/2018/03/19/js%E5%BC%95%E6%93%8E%E7%9A%84%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89/">js引擎的执行过程（一）</a>。<br><br><br>本文主要分析js引擎执行的第三个阶段–<strong>执行阶段</strong>，在分析之前我们先思考以下两个问题：</p>
+<blockquote>
+<p>js是单线程的，为了避免代码解析阻塞使用了异步执行，那么它的异步执行机制是怎么样的？</p>
+</blockquote>
+<p>通过事件循环（Event Loop），理解了事件循环的原理就理解了js的异步执行机制，本文主要介绍。</p>
+<blockquote>
+<p>js是单线程的，那么是否代表参与js执行过程的线程就只有一个？</p>
+</blockquote>
+<p>不是的，会有四个线程参与该过程，但是永远只有JS引擎线程在执行JS脚本程序，其他的三个线程只协助，不参与代码解析与执行。参与js执行过程的线程分别是：</p>
+<ul>
+<li><p><strong>JS引擎线程</strong>： 也称为JS内核，负责解析执行Javascript脚本程序的主线程（例如V8引擎）</p>
+</li>
+<li><p><strong>事件触发线程</strong>： 归属于浏览器内核进程，不受JS引擎线程控制。主要用于控制事件（例如鼠标，键盘等事件），当该事件被触发时候，事件触发线程就会把该事件的处理函数推进<strong>事件队列</strong>，等待JS引擎线程执行</p>
+</li>
+</ul>
+<ul>
+<li><p><strong>定时器触发线程</strong>：主要控制计时器setInterval和延时器setTimeout，用于定时器的计时，计时完毕，满足定时器的触发条件，则将定时器的处理函数推进事件队列中，等待JS引擎线程执行。<br>注：W3C在HTML标准中规定setTimeout低于4ms的时间间隔算为4ms。</p>
+</li>
+<li><p><strong>HTTP异步请求线程</strong>：通过XMLHttpRequest连接后，通过浏览器新开的一个线程，监控readyState状态变更时，如果设置了该状态的回调函数，则将该状态的处理函数推进事件队列中，等待JS引擎线程执行。<br>注：浏览器对通一域名请求的并发连接数是有限制的，Chrome和Firefox限制数为6个，ie8则为10个。</p>
+</li>
+</ul>
+<p>总结：永远只有JS引擎线程在执行JS脚本程序，其他三个线程只负责将满足触发条件的处理函数推进事件队列，等待JS引擎线程执行。</p>
+<h2 id="执行阶段"><a href="/2018/03/26/js引擎的执行过程（二）/#执行阶段" class="headerlink" title="执行阶段"></a>执行阶段</h2><p>我们先分析一个典型的例子（来自<a href="https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/" target="_blank" rel="noopener">Tasks, microtasks, queues and schedules</a>，建议英文基础好的阅读，非常不错的文章）：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">console.log(&apos;script start&apos;);</span><br><span class="line"></span><br><span class="line">setTimeout(function() &#123;</span><br><span class="line">  console.log(&apos;setTimeout&apos;);</span><br><span class="line">&#125;, 0);</span><br><span class="line"></span><br><span class="line">Promise.resolve().then(function() &#123;</span><br><span class="line">  console.log(&apos;promise1&apos;);</span><br><span class="line">&#125;).then(function() &#123;</span><br><span class="line">  console.log(&apos;promise2&apos;);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">console.log(&apos;script end&apos;);</span><br></pre></td></tr></table></figure></p>
+<p>这里我直接划分例子的代码结构，简单描述分析执行过程，暂不解释该过程中的概念和原理，概念和原理将会在下面具体讲解如下：</p>
+<ol>
+<li><p>宏任务（macro-task），宏任务又按执行顺序分为同步任务和异步任务</p>
+<ul>
+<li><p>同步任务</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">console.log(&apos;script start&apos;);</span><br><span class="line"></span><br><span class="line">console.log(&apos;script end&apos;);</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>异步任务</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">setTimeout(function() &#123;</span><br><span class="line">  console.log(&apos;setTimeout&apos;);</span><br><span class="line">&#125;, 0);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+<li><p>微任务（micro-task）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">Promise.resolve().then(function() &#123;</span><br><span class="line">  console.log(&apos;promise1&apos;);</span><br><span class="line">&#125;).then(function() &#123;</span><br><span class="line">  console.log(&apos;promise2&apos;);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>在JS引擎执行过程中，进入执行阶段后，代码的执行顺序如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">宏任务(同步任务) --&gt; 微任务 --&gt; 宏任务(异步任务)</span><br></pre></td></tr></table></figure></p>
+<p>输出结果为：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">script start</span><br><span class="line">script end</span><br><span class="line">promise1</span><br><span class="line">promise2</span><br><span class="line">setTimeout</span><br></pre></td></tr></table></figure></p>
+<p>进入ES6或Node环境中，JS的任务分为两种，分别是<strong>宏任务（macro-task）</strong>和<strong>微任务（micro-task）</strong>，在最新的ECMAScript中，微任务称为jobs，宏任务称为task，他们的执行顺序如上。可能很多人对上面的分析并不理解，那么我们接下来继续对上面例子进行详细分析。</p>
+<h3 id="宏任务"><a href="/2018/03/26/js引擎的执行过程（二）/#宏任务" class="headerlink" title="宏任务"></a>宏任务</h3><p>宏任务（macro-task）可分为<strong>同步任务</strong>和<strong>异步任务</strong>：</p>
+<ul>
+<li><p>同步任务指的是在JS引擎主线程上按顺序执行的任务，只有前一个任务执行完毕后，才能执行后一个任务，形成一个执行栈（函数调用栈）。</p>
+</li>
+<li><p>异步任务指的是不直接进入JS引擎主线程，而是满足触发条件时，相关的线程将该异步任务推进<strong>任务队列(task queue)</strong>，等待JS引擎主线程上的任务执行完毕，空闲时读取执行的任务，例如异步Ajax，DOM事件，setTimeout等。</p>
+</li>
+</ul>
+<p>理解宏任务中同步任务和异步任务的执行顺序，那么就相当于理解了JS异步执行机制–<strong>事件循环（Event Loop）</strong>。</p>
+<h4 id="事件循环"><a href="/2018/03/26/js引擎的执行过程（二）/#事件循环" class="headerlink" title="事件循环"></a>事件循环</h4><p>事件循环可以理解成由三部分组成，分别是：</p>
+<ul>
+<li><p><strong>主线程执行栈</strong></p>
+</li>
+<li><p><strong>异步任务等待触发</strong></p>
+</li>
+<li><p><strong>任务队列</strong></p>
+</li>
+</ul>
+<p><strong>任务队列(task queue)就是以队列的数据结构对事件任务进行管理，特点是先进先出，后进后出</strong>。<br><br><br>这里直接引用一张著名的图片(参考自Philip Roberts的演讲《Help, I’m stuck in an event-loop》)，帮助我们理解，如下：<br><img src="/2018/03/26/js引擎的执行过程（二）/img/Event Loop.jpg" alt="Event Loop"></p>
+<p>在JS引擎主线程执行过程中：</p>
+<ul>
+<li><p>首先执行宏任务的同步任务，在主线程上形成一个<strong>执行栈</strong>，可理解为函数调用栈；</p>
+</li>
+<li><p>当执行栈中的函数调用到一些异步执行的API（例如异步Ajax，DOM事件，setTimeout等API），则会开启对应的线程（Http异步请求线程，事件触发线程和定时器触发线程）进行监控和控制</p>
+</li>
+<li><p>当异步任务的事件满足触发条件时，对应的线程则会把该事件的处理函数推进<strong>任务队列(task queue)</strong>中，等待主线程读取执行</p>
+</li>
+<li><p>当JS引擎主线程上的任务执行完毕，则会读取任务队列中的事件，将任务队列中的事件任务推进主线程中，按任务队列顺序执行</p>
+</li>
+<li><p>当JS引擎主线程上的任务执行完毕后，则会再次读取任务队列中的事件任务，如此循环，这就是事件循环（Event Loop）的过程</p>
+</li>
+</ul>
+<p>如果还是不能理解，那么我们再次拿上面的例子进行详细分析，该例子中宏任务的代码部分是：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">console.log(&apos;script start&apos;);</span><br><span class="line"></span><br><span class="line">setTimeout(function() &#123;</span><br><span class="line">  console.log(&apos;setTimeout&apos;);</span><br><span class="line">&#125;, 0);</span><br><span class="line"></span><br><span class="line">console.log(&apos;script end&apos;);</span><br></pre></td></tr></table></figure></p>
+<p>代码执行过程如下：</p>
+<ol>
+<li><p>JS引擎主线程按代码顺序执行，当执行到<code>console.log(&#39;script start&#39;);</code>，JS引擎主线程认为该任务是<strong>同步任务</strong>，所以立刻执行输出script start，然后继续向下执行；</p>
+</li>
+<li><p>JS引擎主线程执行到<code>setTimeout(function() {
+console.log(&#39;setTimeout&#39;);
+}, 0);</code>，JS引擎主线程认为setTimeout是<strong>异步任务</strong>API，则向浏览器内核进程申请开启定时器线程进行计时和控制该setTimeout任务。由于W3C在HTML标准中规定setTimeout低于4ms的时间间隔算为4ms，那么当计时到4ms时，定时器线程就把该回调处理函数推进任务队列中等待主线程执行，然后JS引擎主线程继续向下执行</p>
+</li>
+<li><p>JS引擎主线程执行到<code>console.log(&#39;script end&#39;);</code>，JS引擎主线程认为该任务是<strong>同步任务</strong>，所以立刻执行输出script end</p>
+</li>
+<li><p>JS引擎主线程上的任务执行完毕（输出script start和script end）后，主线程空闲，则开始读取任务队列中的事件任务，将该任务队里的事件任务推进主线程中，按任务队列顺序执行，最终输出setTimeout，所以输出的结果顺序为<code>script start    script end    setTimeout</code></p>
+</li>
+</ol>
+<p>以上便是JS引擎执行宏任务的整个过程。</p>
+<p>理解该过程后，我们做一些拓展性的思考：</p>
+<blockquote>
+<p>我们都知道setTimeout和setInterval是异步任务的定时器，需要添加到任务队列等待主线程执行，那么使用setTimeout模拟实现setInterval，会有区别吗？</p>
+</blockquote>
+<p>答案是有区别的，我们不妨思考一下：</p>
+<ul>
+<li><p>setTimeout实现setInterval只能通过递归调用</p>
+</li>
+<li><p>setTimeout是在到了指定时间的时候就把事件推到任务队列中，只有当在任务队列中的setTimeout事件被主线程执行后，才会继续再次在到了指定时间的时候把事件推到任务队列，那么setTimeout的事件执行肯定比指定的时间要久，具体相差多少跟代码执行时间有关</p>
+</li>
+<li><p>setInterval则是每次都精确的隔一段时间就向任务队列推入一个事件，无论上一个setInterval事件是否已经执行，所以有可能存在setInterval的事件任务累积，导致setInterval的代码重复连续执行多次，影响页面性能。</p>
+</li>
+</ul>
+<p>综合以上的分析，使用setTimeout实现计时功能是比setInterval性能更好的。当然如果不需要兼容低版本的IE浏览器，使用<strong>requestAnimationFrame</strong>是更好的选择。</p>
+<p>我们继续再做进一步的思考，如下：</p>
+<blockquote>
+<p>高频率触发的事件（例如滚动事件）触发频率过高会影响页面性能，甚至造成页面卡顿，我们是否可以利用计时器的原理进行优化呢？</p>
+</blockquote>
+<p>是可以的，我们可以利用setTimeout实现计时器的原理，对高频触发的事件进行优化，实现点在于将多个触发事件合并成一个，这就是<strong>防抖</strong>和<strong>节流</strong>，本文先不做具体讲解，大家可以自行研究，有机会我再另开文章分析。</p>
+<h3 id="微任务"><a href="/2018/03/26/js引擎的执行过程（二）/#微任务" class="headerlink" title="微任务"></a>微任务</h3><p>微任务是在es6和node环境中出现的一个任务类型，如果不考虑es6和node环境的话，我们只需要理解宏任务事件循环的执行过程就已经足够了，但是到了es6和node环境，我们就需要理解微任务的执行顺序了。<br><strong>微任务（micro-task）的API主要有:Promise， process.nextTick</strong></p>
+<p>这里我们直接引用一张流程图帮助我们理解，如下：<br><img src="/2018/03/26/js引擎的执行过程（二）/img/task.jpg" alt="task"></p>
+<p>在宏任务中执行的任务有两种，分别是<strong>同步任务</strong>和<strong>异步任务</strong>，因为异步任务会在满足触发条件时才会推进任务队列（task queue），然后等待主线程上的任务执行完毕，再读取任务队列中的任务事件，最后推进主线程执行，所以这里将异步任务即任务队列看作是新的宏任务。执行的过程如上图所示：</p>
+<ol>
+<li><p>执行宏任务中<strong>同步任务</strong>，执行结束；</p>
+</li>
+<li><p>检查是否存在可执行的<strong>微任务</strong>，有的话执行所有微任务，然后读取任务队列的任务事件，推进主线程形成新的宏任务；没有的话则读取任务队列的任务事件，推进主线程形成新的宏任务</p>
+</li>
+<li><p>执行<strong>新宏任务</strong>的事件任务，再检查是否存在可执行的微任务，如此不断的重复循环</p>
+</li>
+</ol>
+<p>这就是加入微任务后的详细事件循环，如果还没有理解，那么们对一开始的例子做一个全面的分析，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">console.log(&apos;script start&apos;);</span><br><span class="line"></span><br><span class="line">setTimeout(function() &#123;</span><br><span class="line">  console.log(&apos;setTimeout&apos;);</span><br><span class="line">&#125;, 0);</span><br><span class="line"></span><br><span class="line">Promise.resolve().then(function() &#123;</span><br><span class="line">  console.log(&apos;promise1&apos;);</span><br><span class="line">&#125;).then(function() &#123;</span><br><span class="line">  console.log(&apos;promise2&apos;);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">console.log(&apos;script end&apos;);</span><br></pre></td></tr></table></figure></p>
+<p>执行过程如下：</p>
+<ol>
+<li><p>代码块通过语法分析和预编译后，进入执行阶段，当JS引擎主线程执行到<code>console.log(&#39;script start&#39;);</code>，JS引擎主线程认为该任务是<strong>同步任务</strong>，所以立刻执行输出<code>script start</code>，然后继续向下执行；</p>
+</li>
+<li><p>JS引擎主线程执行到<code>setTimeout(function() {
+console.log(&#39;setTimeout&#39;);
+}, 0);</code>，JS引擎主线程认为setTimeout是<strong>异步任务</strong>API，则向浏览器内核进程申请开启定时器线程进行计时和控制该setTimeout任务。由于W3C在HTML标准中规定setTimeout低于4ms的时间间隔算为4ms，那么当计时到4ms时，定时器线程就把该回调处理函数推进任务队列中等待主线程执行，然后JS引擎主线程继续向下执行</p>
+</li>
+<li><p>JS引擎主线程执行到<code>Promise.resolve().then(function() {
+console.log(&#39;promise1&#39;);
+}).then(function() {
+console.log(&#39;promise2&#39;);
+});</code>，JS引擎主线程认为Promise是一个<strong>微任务</strong>，这把该任务划分为微任务，等待执行</p>
+</li>
+<li><p>JS引擎主线程执行到<code>console.log(&#39;script end&#39;);</code>，JS引擎主线程认为该任务是<strong>同步任务</strong>，所以立刻执行输出<code>script end</code></p>
+</li>
+<li><p>主线程上的宏任务执行完毕，则开始检测是否存在可执行的微任务，检测到一个<strong>Promise微任务</strong>，那么立刻执行，输出<code>promise1</code>和<code>promise2</code></p>
+</li>
+<li><p>微任务执行完毕，主线程开始读取任务队列中的事件任务setTimeout，推入主线程形成<strong>新宏任务</strong>，然后在主线程中执行，输出<code>setTimeout</code></p>
+</li>
+</ol>
+<p>最后的输出结果即为：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">script start</span><br><span class="line">script end</span><br><span class="line">promise1</span><br><span class="line">promise2</span><br><span class="line">setTimeout</span><br></pre></td></tr></table></figure></p>
+<h2 id="总结"><a href="/2018/03/26/js引擎的执行过程（二）/#总结" class="headerlink" title="总结"></a>总结</h2><p>以上便是JS引擎执行的全部过程，JS引擎的执行过程其实并不复杂，只要多思考多研究就可以理解，理解该过程后可以在一定程度上提高对JS的认识。</p>
+<h2 id="参考文献"><a href="/2018/03/26/js引擎的执行过程（二）/#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ul>
+<li><a href="https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/" target="_blank" rel="noopener">Tasks, microtasks, queues and schedules</a></li>
+</ul>
+
+          </section>
+        </article>
+        
+
+       
+        <div class="pager">
+          
+            <a class="post-prev pager-item" href="/2018/04/16/彻底理解浏览器的缓存机制/" >
+              <strong class="article-nav-caption">上一篇</strong>
+              <p class="post-nav-title">彻底理解浏览器的缓存机制</p>
+            </a>
+          
+          
+            <a class="post-next pager-item" href="/2018/03/19/js引擎的执行过程（一）/">
+              <strong class="article-nav-caption">下一篇</strong>
+              <p class="post-nav-title">js引擎的执行过程（一）</p>
+            </a>
+          
+        </div>
+        
+
+         <!-- comments -->
+        
+              <div id="gitalk-container"></div>
+
+  <link rel="stylesheet" href="/css/gitalk.css">
+  <script src="/js/gitalk.js"></script>
+  <script>
+    const gitalk = new Gitalk({
+      clientID: 'ad4f0565d8335986ed07',
+      clientSecret: 'b8650d8cfe437436552d0e071a01162d5ca8ce7b',
+      repo: 'HeyingYe.github.io',
+      owner: 'HeyingYe',
+      admin: ['HeyingYe'],
+      // id: "25859283",
+      // facebook-like distraction free mode
+      distractionFreeMode: false
+    })
+
+    gitalk.render('gitalk-container')
+  </script>
+
+        
+
+    </div>
+    
+    <aside>
+        <div id="toc">
+        </div>
+    </aside>
+    
+</div>
+
+                </div>
+            </div>
+        </div>
+        <footer class="footer">
+    <p>
+        &copy; 2019 Heying Ye
+    </p>
+    <p>
+    	Heying Ye&#39;s Personal Website
+    </p>
+</footer>
+
+<script src="/lib/jquery.js"></script>
+<script src="/lib/waves.js"></script>
+<script src="/lib/jquery-ui.js"></script>
+<script src="/lib/jquery.tocify.js"></script>
+<script src="/js/main.js"></script>
+<script src="//cdn1.lncld.net/static/js/2.5.0/av-min.js"></script>
+<script>
+    var APP_ID = 'RlVTs39iH2XgPPmtz1SnpBcd-gzGzoHsz';
+    var APP_KEY = 'WAah43CakeUFdpSNioyxwswD';
+    AV.init({
+        appId: APP_ID,
+        appKey: APP_KEY
+    });
+    // 显示次数
+    function showTime(Counter) {
+        var query = new AV.Query("Counter");
+        if($(".leancloud_visitors").length > 0){
+            var url = $(".leancloud_visitors").attr('id').trim();
+            // where field
+            query.equalTo("words", url);
+            // count 
+            query.count().then(function (number) {
+                // There are number instances of MyClass where words equals url.
+                $(document.getElementById(url)).text(number?  number : '--');
+            }, function (error) {
+                // error is an instance of AVError.
+            });
+        }
+    }
+      // 追加pv
+    function addCount(Counter) {
+        var url = $(".leancloud_visitors").length > 0 ? $(".leancloud_visitors").attr('id').trim() : 'https://heyingye.github.io/';
+        var Counter = AV.Object.extend("Counter");
+        var query = new Counter;
+        query.save({
+            words: url
+        }).then(function (object) {
+        })
+    }
+    $(function () {
+        var Counter = AV.Object.extend("Counter");
+        addCount(Counter);
+        showTime(Counter);
+    });
+</script>
+    </body>
+</html>
